@@ -185,6 +185,7 @@
       winDesc.textContent = `Excelente! Prepare-se para o nível ${currentLevel + 1}.`;
       winOverlay.classList.add('show');
       stopHold();
+      playWinJingle(); // 🔊 som diferente a cada chegada
     }
   }
 
@@ -241,7 +242,6 @@
     }
   }
 
-  // Botões abaixo
   underControls.addEventListener('pointerdown', (e) => {
     const btn = e.target.closest('.uc-btn');
     if (!btn) return;
@@ -253,7 +253,6 @@
   });
   ['pointerup','pointercancel','pointerleave'].forEach(t => underControls.addEventListener(t, stopHold));
 
-  // Teclado com hold
   const dirByKey = new Map([
     ['ArrowUp',[0,-1]],  ['KeyW',[0,-1]],
     ['ArrowDown',[0,1]], ['KeyS',[0,1]],
@@ -272,8 +271,10 @@
   }, { passive:false });
   window.addEventListener('keyup', (e) => { if (dirByKey.has(e.code)) stopHold(); }, { passive:true });
 
-  // ---------- ÁUDIO ----------
+  // ---------- ÁUDIO: TRILHA ALEGRE + EFEITOS ----------
   let actx = null, masterGain = null, musicOn = false;
+  const BEAT = 0.12; // mais rápido/dinâmico
+  let loopTimer = null;
 
   function initAudio() {
     if (actx) return;
@@ -282,39 +283,71 @@
     masterGain.gain.value = parseFloat(vol.value);
     masterGain.connect(actx.destination);
   }
-
   function resumeAudioIfNeeded() {
     if (!actx) initAudio();
     if (actx.state === 'suspended') actx.resume();
   }
-
   vol.addEventListener('input', () => { if (masterGain) masterGain.gain.value = parseFloat(vol.value); });
 
-  function playNote(freq, t0, dur=0.28) {
+  // helpers
+  function playTone(type, freq, t0, dur, gain=0.3, a=0.01, r=0.06) {
     const osc = actx.createOscillator();
-    const gain = actx.createGain();
-    osc.type = 'sine';
+    const g  = actx.createGain();
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, t0);
-    gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(0.6, t0 + 0.02);
-    gain.gain.linearRampToValueAtTime(0.0, t0 + dur);
-    osc.connect(gain).connect(masterGain);
-    osc.start(t0); osc.stop(t0 + dur + 0.02);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain, t0 + a);
+    g.gain.linearRampToValueAtTime(0, t0 + dur);
+    osc.connect(g).connect(masterGain);
+    osc.start(t0); osc.stop(t0 + dur + r);
   }
-
+  function noiseHat(t0, dur=0.03, gain=0.12) {
+    const buffer = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1)*0.7;
+    const src = actx.createBufferSource(); src.buffer = buffer;
+    const g = actx.createGain(); g.gain.setValueAtTime(gain, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(8000, t0);
+    src.connect(hp).connect(g).connect(masterGain);
+    src.start(t0); src.stop(t0+dur);
+  }
   const NOTE = {
+    C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
     C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
-    C5:523.25, D5:587.33, E5:659.25, G5:783.99
+    C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00
   };
 
-  const phrase = [
-    NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5,
-    NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
-    NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4,
-    NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4
+  // Progressão alegre: I–V–vi–IV (C–G–Am–F)
+  const CHORDS = [
+    [NOTE.C4, NOTE.E4, NOTE.G4], // C
+    [NOTE.G3, NOTE.D4, NOTE.B4], // G
+    [NOTE.A3, NOTE.C4, NOTE.E4], // Am
+    [NOTE.F3, NOTE.A3, NOTE.C4], // F
   ];
-  const beatDur = 0.15;
-  let loopTimer = null;
+  const BASS = [NOTE.C3, NOTE.G3, NOTE.A3, NOTE.F3];
+
+  function scheduleBar(barIndex) {
+    const t0 = actx.currentTime + 0.03;
+    const chord = CHORDS[barIndex % CHORDS.length];
+    const bass  = BASS[barIndex % BASS.length];
+
+    // hi-hat a cada 1/2 beat
+    for (let i=0;i<8;i++) noiseHat(t0 + i*BEAT*0.5, 0.02, i%2?0.10:0.07);
+
+    // baixo marcando no início e em síncope
+    playTone('sawtooth', bass, t0, BEAT*1.2, 0.18, 0.003, 0.06);
+    playTone('sawtooth', bass, t0 + BEAT*1.5, BEAT*1.0, 0.14, 0.003, 0.06);
+
+    // arpejo triângulo rápido (alegre)
+    const arp = [0,1,2,1,0,2,1,2];
+    arp.forEach((idx, i) => {
+      playTone('triangle', chord[idx]*2, t0 + i*BEAT*0.5, BEAT*0.45, 0.22, 0.005, 0.05);
+    });
+
+    // melodia simples no topo
+    const top = [chord[0]*4, chord[1]*4, chord[2]*4, chord[1]*4];
+    top.forEach((f,i) => playTone('sine', f, t0 + i*BEAT, BEAT*0.9, 0.18, 0.005, 0.05));
+  }
 
   function startMusic() {
     initAudio();
@@ -323,12 +356,10 @@
     musicToggle.setAttribute('aria-pressed', 'true');
     musicToggle.textContent = '🎵 Música: Ligada';
 
-    const schedule = () => {
-      const t0 = actx.currentTime + 0.05;
-      phrase.forEach((f, i) => playNote(f, t0 + i*beatDur, beatDur*0.95));
-    };
-    schedule();
-    loopTimer = setInterval(schedule, phrase.length * beatDur * 1000);
+    let bar = 0;
+    const run = () => { scheduleBar(bar++); };
+    run();
+    loopTimer = setInterval(run, Math.round((BEAT*4) * 1000)); // 1 compasso a cada 4 beats
   }
 
   function stopMusic() {
@@ -343,30 +374,42 @@
     else { stopMusic(); }
   });
 
-  // ---------- AUTOPLAY DA MÚSICA ----------
-  // Tenta tocar automaticamente; se o navegador bloquear,
-  // liga assim que houver qualquer interação do usuário.
+  // ---------- JINGLE DE VITÓRIA (varia a cada vez) ----------
+  function playWinJingle() {
+    resumeAudioIfNeeded();
+    const t = actx.currentTime + 0.02;
+    const pick = (Math.random()*3)|0;
+
+    if (pick === 0) {
+      // arpejo crescente brilhante
+      [NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5, NOTE.E5].forEach((f,i)=>
+        playTone('triangle', f, t + i*0.08, 0.12, 0.35, 0.005, 0.05));
+    } else if (pick === 1) {
+      // trinado rápido + resolve
+      for (let i=0;i<6;i++) playTone('sine', i%2?NOTE.G4:NOTE.A4, t + i*0.05, 0.07, 0.28);
+      playTone('triangle', NOTE.C5, t + 6*0.05, 0.20, 0.35);
+    } else {
+      // cadência V–I com acorde
+      playTone('sawtooth', NOTE.G4, t, 0.18, 0.28);
+      playTone('sawtooth', NOTE.D4, t, 0.18, 0.22);
+      playTone('sawtooth', NOTE.B3, t, 0.18, 0.22);
+      setTimeout(()=> {
+        [NOTE.C4, NOTE.E4, NOTE.G4].forEach(f => playTone('triangle', f, actx.currentTime, 0.22, 0.34));
+      }, 180);
+    }
+  }
+
+  // ---------- AUTOPLAY ----------
   function requestAutoplay() {
     initAudio();
-    // alguns navegadores permitem iniciar logo no load:
     actx.resume().finally(() => {
       startMusic();
-      // se ainda estiver "suspended", aguardamos um gesto:
       if (actx.state !== 'running') {
-        const unlock = () => {
-          resumeAudioIfNeeded();
-          startMusic();
-          if (actx.state === 'running') {
-            removeUnlockers();
-          }
-        };
+        const unlock = () => { resumeAudioIfNeeded(); startMusic(); if (actx.state==='running') removeUnlock(); };
         const events = ['pointerdown','touchstart','keydown','click','visibilitychange','focus'];
-        function removeUnlockers() {
-          events.forEach(ev => window.removeEventListener(ev, unlock, true));
-        }
-        events.forEach(ev => window.addEventListener(ev, unlock, true));
-        // fallback extra: tenta novamente depois de um curto período
-        setTimeout(unlock, 1200);
+        function removeUnlock(){ events.forEach(ev=>window.removeEventListener(ev, unlock, true)); }
+        events.forEach(ev=>window.addEventListener(ev, unlock, true));
+        setTimeout(unlock, 1000);
       }
     });
   }
@@ -388,9 +431,6 @@
     resizeTO = setTimeout(() => { fitCanvas(); draw(); }, 120);
   });
 
-  // dispara o autoplay logo após o carregamento (best-effort)
-  window.addEventListener('load', () => {
-    // pequeno atraso para garantir contexto pronto
-    setTimeout(requestAutoplay, 300);
-  });
+  // autoplay logo após carregar
+  window.addEventListener('load', () => setTimeout(requestAutoplay, 300));
 })();
