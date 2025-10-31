@@ -1,6 +1,6 @@
 /*
   © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
-*/
+ */
 
 :root {
   --bg: #0f172a;
@@ -172,7 +172,7 @@ canvas {
   display: grid;
   gap: 10px;
   justify-items: center;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .uc-row {
@@ -181,14 +181,14 @@ canvas {
 }
 
 .uc-btn {
-  width: 84px;       /* aumentados */
-  height: 84px;      /* aumentados */
-  border-radius: 18px;
+  width: 90px;       /* aumentados */
+  height: 90px;      /* aumentados */
+  border-radius: 20px;
   border: 1px solid #374151;
   background: #0c1530;
   color: #e5e7eb;
   font-weight: 800;
-  font-size: 28px;   /* setas maiores */
+  font-size: 30px;   /* setas maiores */
   box-shadow: 0 6px 20px #0008, inset 0 2px 12px #0008;
   user-select: none;
   -webkit-user-select: none;
@@ -207,14 +207,20 @@ canvas {
 /* responsivo para telas pequenas */
 @media (max-width: 480px) {
   .uc-btn {
-    width: 72px;
-    height: 72px;
-    font-size: 26px;
+    width: 76px;
+    height: 76px;
+    font-size: 28px;
   }
 }
 
+/* Rodapé simplificado */
+footer {
+  justify-content: center;
+  font-size: 14px;
+}
+
 footer small {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 a {
