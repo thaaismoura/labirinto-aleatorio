@@ -1,5 +1,6 @@
 /*
   © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  Código base criado com auxílio do ChatGPT.
 */
 
 :root {
@@ -16,7 +17,10 @@
   --ring: #ffffff11; /* brilho */
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0;
   height: 100%;
@@ -45,7 +49,12 @@ header, footer {
   box-shadow: 0 10px 30px #00000055;
 }
 
-header h1 { font-size: clamp(16px, 3.5vw, 22px); margin: 0; font-weight: 700; }
+header h1 {
+  font-size: clamp(16px, 3.5vw, 22px);
+  margin: 0;
+  font-weight: 700;
+}
+
 .badge {
   margin-left: 8px;
   background: #0b1226;
@@ -56,9 +65,15 @@ header h1 { font-size: clamp(16px, 3.5vw, 22px); margin: 0; font-weight: 700; }
 }
 
 .controls {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
-.btn, select, input[type="range"] {
+
+.btn,
+select,
+input[type="range"] {
   appearance: none;
   border: 1px solid #334155;
   background: #0b1226;
@@ -67,14 +82,34 @@ header h1 { font-size: clamp(16px, 3.5vw, 22px); margin: 0; font-weight: 700; }
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform .06s ease, box-shadow .12s ease, border-color .2s ease;
+  transition: transform 0.06s ease, box-shadow 0.12s ease, border-color 0.2s ease;
   box-shadow: 0 2px 16px #00000040 inset;
 }
-.btn:hover, select:hover { border-color: #4b5563; }
-.btn:active { transform: translateY(1px) scale(0.99); }
-.btn.primary { background: #0e1a38; border-color: #3b82f6; }
-.music-controls { display: inline-flex; gap: 8px; align-items: center; }
-.hint { opacity: .85; font-size: 12px; }
+
+.btn:hover,
+select:hover {
+  border-color: #4b5563;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.btn.primary {
+  background: #0e1a38;
+  border-color: #3b82f6;
+}
+
+.music-controls {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hint {
+  opacity: 0.85;
+  font-size: 12px;
+}
 
 .canvas-wrap {
   position: relative;
@@ -87,9 +122,14 @@ header h1 { font-size: clamp(16px, 3.5vw, 22px); margin: 0; font-weight: 700; }
   box-shadow: 0 30px 60px #0000006c inset, 0 10px 40px #00000070;
 }
 
-canvas { display: block; max-width: 100%; height: auto; touch-action: none; }
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  touch-action: none;
+}
 
-/* HUD */
+/* HUD (mensagem de vitória) */
 .overlay {
   position: absolute;
   inset: 0;
@@ -98,7 +138,11 @@ canvas { display: block; max-width: 100%; height: auto; touch-action: none; }
   background: #00000080;
   backdrop-filter: blur(3px);
 }
-.overlay.show { display: grid; }
+
+.overlay.show {
+  display: grid;
+}
+
 .card {
   background: #0b1226;
   border: 1px solid #334155;
@@ -108,38 +152,77 @@ canvas { display: block; max-width: 100%; height: auto; touch-action: none; }
   max-width: 420px;
   box-shadow: 0 10px 30px #0008;
 }
-.card h2 { margin: 0 0 8px; }
-.card p { margin: 0 12px 14px; opacity: .9; }
-.card .row { display: flex; gap: 8px; justify-content: center; }
 
-/* Controles abaixo */
+.card h2 {
+  margin: 0 0 8px;
+}
+
+.card p {
+  margin: 0 12px 14px;
+  opacity: 0.9;
+}
+
+.card .row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* CONTROLES ABAIXO DO JOGO */
 .under-controls {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   justify-items: center;
-  margin-top: -6px;
+  margin-top: 4px;
 }
-.uc-row { display: flex; gap: 8px; }
+
+.uc-row {
+  display: flex;
+  gap: 10px;
+}
+
 .uc-btn {
-  width: 64px; height: 64px;
-  border-radius: 14px;
+  width: 84px;       /* aumentados */
+  height: 84px;      /* aumentados */
+  border-radius: 18px;
   border: 1px solid #374151;
   background: #0c1530;
   color: #e5e7eb;
   font-weight: 800;
-  font-size: 20px;
-  box-shadow: 0 4px 16px #0006, inset 0 2px 12px #0008;
+  font-size: 28px;   /* setas maiores */
+  box-shadow: 0 6px 20px #0008, inset 0 2px 12px #0008;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  transition: transform 0.08s ease, background 0.2s;
 }
-.uc-btn:active { transform: translateY(1px) scale(0.99); }
 
-footer small { opacity: .85; }
-a { color: var(--accent2); text-decoration: none; }
-a:hover { text-decoration: underline; }
+.uc-btn:hover {
+  background: #182554;
+}
 
-/* responsivo */
+.uc-btn:active {
+  transform: translateY(2px) scale(0.97);
+}
+
+/* responsivo para telas pequenas */
 @media (max-width: 480px) {
-  .uc-btn { width: 56px; height: 56px; font-size: 18px; }
+  .uc-btn {
+    width: 72px;
+    height: 72px;
+    font-size: 26px;
+  }
+}
+
+footer small {
+  opacity: 0.85;
+}
+
+a {
+  color: var(--accent2);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
