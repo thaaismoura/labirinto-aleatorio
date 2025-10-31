@@ -9,11 +9,11 @@
   --accent2: #60a5fa;
 
   /* estas variáveis mudam por nível via JS */
-  --wall: #1f2937;
-  --path: #0b1022;
-  --player: #f59e0b;
-  --goal: #ef4444;
-  --ring: #ffffff11;
+  --wall: #1f2937;   /* parede */
+  --path: #0b1022;   /* caminho */
+  --player: #f59e0b; /* bolinha */
+  --goal: #ef4444;   /* objetivo */
+  --ring: #ffffff11; /* brilho */
 }
 
 * {
@@ -25,7 +25,7 @@ html, body {
   height: 100%;
   background: radial-gradient(1200px 800px at 20% 10%, #101a3b 0%, var(--bg) 50%, #090d1d 100%);
   color: #e5e7eb;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
 }
 
 .wrap {
@@ -181,14 +181,14 @@ canvas {
 }
 
 .uc-btn {
-  width: 90px;
-  height: 90px;
+  width: 90px;       /* aumentados */
+  height: 90px;      /* aumentados */
   border-radius: 20px;
   border: 1px solid #374151;
   background: #0c1530;
   color: #e5e7eb;
   font-weight: 800;
-  font-size: 30px;
+  font-size: 30px;   /* setas maiores */
   box-shadow: 0 6px 20px #0008, inset 0 2px 12px #0008;
   user-select: none;
   -webkit-user-select: none;
@@ -213,7 +213,7 @@ canvas {
   }
 }
 
-/* Rodapé simples */
+/* Rodapé simplificado */
 footer {
   justify-content: center;
   font-size: 14px;
