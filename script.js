@@ -1,6 +1,5 @@
 /*
-    © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.</small>
-  
+    © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
 */
 
 (() => {
