@@ -20,7 +20,6 @@
   const vol = document.getElementById('vol');
 
   // ---------- CONFIG DE NÍVEIS ----------
-  // cada nível cresce o tamanho do labirinto e reduz o delay (mais rápido)
   const LEVELS = [
     { cols: 15, rows: 11, delay: 110 }, // bem fácil
     { cols: 21, rows: 15, delay: 95  },
@@ -44,7 +43,7 @@
   const holdState = {
     dir: null,
     intId: null,
-    delay: 90,     // será substituído por delay do nível
+    delay: 90,     // será substituído pelo delay do nível
     running: false
   };
 
@@ -55,7 +54,6 @@
 
   // tema/cores por nível (maze + player)
   function setThemeForLevel(level) {
-    // gera um hue baseado no nível e aplica variações
     const baseHue = (level * 47) % 360;
     const wall = `hsl(${baseHue}, 22%, 18%)`;
     const path = `hsl(${baseHue}, 30%, 8%)`;
@@ -195,7 +193,6 @@
     levelTag.textContent = `Nível ${currentLevel}`;
     setThemeForLevel(currentLevel);
 
-    // tamanho e velocidade pelo nível (ou manual, se usuário escolher)
     const mode = sizeSel.value;
     if (mode === 'AUTO') {
       const cfg = dimsForAutoLevel();
@@ -203,7 +200,6 @@
       H = odd(cfg.rows);
       holdState.delay = cfg.delay;
     } else {
-      // tamanhos manuais fixos, mas ainda acelera com nível
       const map = { S:[21,15], M:[35,25], G:[51,35], X:[69,49] };
       const [cols, rows] = map[mode] || [35,25];
       W = odd(cols); H = odd(rows);
@@ -276,8 +272,9 @@
   }, { passive:false });
   window.addEventListener('keyup', (e) => { if (dirByKey.has(e.code)) stopHold(); }, { passive:true });
 
-  // ---------- ÁUDIO (mesmo da versão anterior) ----------
+  // ---------- ÁUDIO ----------
   let actx = null, masterGain = null, musicOn = false;
+
   function initAudio() {
     if (actx) return;
     actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -285,10 +282,12 @@
     masterGain.gain.value = parseFloat(vol.value);
     masterGain.connect(actx.destination);
   }
+
   function resumeAudioIfNeeded() {
     if (!actx) initAudio();
     if (actx.state === 'suspended') actx.resume();
   }
+
   vol.addEventListener('input', () => { if (masterGain) masterGain.gain.value = parseFloat(vol.value); });
 
   function playNote(freq, t0, dur=0.28) {
@@ -302,20 +301,28 @@
     osc.connect(gain).connect(masterGain);
     osc.start(t0); osc.stop(t0 + dur + 0.02);
   }
+
   const NOTE = {
     C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
     C5:523.25, D5:587.33, E5:659.25, G5:783.99
   };
-  const phrase = [ NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5, NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
-                   NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4 ];
+
+  const phrase = [
+    NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5,
+    NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
+    NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4,
+    NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4
+  ];
   const beatDur = 0.15;
   let loopTimer = null;
+
   function startMusic() {
     initAudio();
     if (musicOn) return;
     musicOn = true;
     musicToggle.setAttribute('aria-pressed', 'true');
     musicToggle.textContent = '🎵 Música: Ligada';
+
     const schedule = () => {
       const t0 = actx.currentTime + 0.05;
       phrase.forEach((f, i) => playNote(f, t0 + i*beatDur, beatDur*0.95));
@@ -323,13 +330,46 @@
     schedule();
     loopTimer = setInterval(schedule, phrase.length * beatDur * 1000);
   }
+
   function stopMusic() {
     musicOn = false;
     musicToggle.setAttribute('aria-pressed', 'false');
     musicToggle.textContent = '🎵 Música: Desligada';
     if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
   }
-  musicToggle.addEventListener('click', () => { resumeAudioIfNeeded(); musicOn ? stopMusic() : startMusic(); });
+
+  musicToggle.addEventListener('click', () => {
+    if (!musicOn) { resumeAudioIfNeeded(); startMusic(); }
+    else { stopMusic(); }
+  });
+
+  // ---------- AUTOPLAY DA MÚSICA ----------
+  // Tenta tocar automaticamente; se o navegador bloquear,
+  // liga assim que houver qualquer interação do usuário.
+  function requestAutoplay() {
+    initAudio();
+    // alguns navegadores permitem iniciar logo no load:
+    actx.resume().finally(() => {
+      startMusic();
+      // se ainda estiver "suspended", aguardamos um gesto:
+      if (actx.state !== 'running') {
+        const unlock = () => {
+          resumeAudioIfNeeded();
+          startMusic();
+          if (actx.state === 'running') {
+            removeUnlockers();
+          }
+        };
+        const events = ['pointerdown','touchstart','keydown','click','visibilitychange','focus'];
+        function removeUnlockers() {
+          events.forEach(ev => window.removeEventListener(ev, unlock, true));
+        }
+        events.forEach(ev => window.addEventListener(ev, unlock, true));
+        // fallback extra: tenta novamente depois de um curto período
+        setTimeout(unlock, 1200);
+      }
+    });
+  }
 
   // ---------- UI ----------
   newBtn.addEventListener('click', () => newGame());
@@ -338,14 +378,19 @@
   sizeSel.addEventListener('change', () => newGame());
 
   // ---------- INICIALIZAÇÃO ----------
-  // começa no nível 1 (bem fácil) e tema correspondente
   setThemeForLevel(currentLevel);
   applyLevel(currentLevel);
 
-  // Ajuste de canvas ao redimensionar
+  // canvas resize
   let resizeTO;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTO);
     resizeTO = setTimeout(() => { fitCanvas(); draw(); }, 120);
+  });
+
+  // dispara o autoplay logo após o carregamento (best-effort)
+  window.addEventListener('load', () => {
+    // pequeno atraso para garantir contexto pronto
+    setTimeout(requestAutoplay, 300);
   });
 })();
