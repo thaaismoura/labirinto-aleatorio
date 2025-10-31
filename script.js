@@ -1,65 +1,68 @@
+/*
+  © 2025 Fernanda de Almeida Oliveira. Todos os direitos reservados.
+  Código base criado com auxílio do ChatGPT. Licença sugerida: MIT (opcional).
+*/
+
 (() => {
+  // ---------- ELEMENTOS ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
   const sizeSel = document.getElementById('sizeSel');
   const newBtn = document.getElementById('newBtn');
   const againBtn = document.getElementById('againBtn');
   const winOverlay = document.getElementById('winOverlay');
-  const dpad = document.getElementById('dpad');
   const stage = document.getElementById('stage');
+  const underControls = document.getElementById('underControls');
+  const musicToggle = document.getElementById('musicToggle');
+  const vol = document.getElementById('vol');
 
-  // Estado do jogo
-  let grid = [];        // matriz de 0 (caminho) e 1 (parede)
-  let W = 41, H = 31;   // dimensões ímpares (colunas x linhas)
-  let tile = 16;        // tamanho do bloco em px (ajustado dinamicamente)
+  // ---------- ESTADO DO JOGO ----------
+  let grid = [];        // 0 caminho | 1 parede
+  let W = 41, H = 31;   // colunas x linhas (ímpares)
+  let tile = 16;
   let player = {x:1, y:1};
   let goal = {x: W-2, y: H-2};
 
-  // ============================
-  // Utilidades
-  // ============================
+  // Movimento contínuo
+  const holdState = {
+    // direção atual pressionada pelos botões abaixo (ou teclado)
+    dir: null,          // [dx, dy]
+    intId: null,        // setInterval id
+    delay: 100,         // ms entre passos
+    running: false
+  };
+
+  // ---------- UTILIDADES ----------
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const choice = arr => arr[(Math.random() * arr.length) | 0];
   const odd = n => n % 2 ? n : n-1;
 
   function dimsFor(sizeKey) {
-    // Escolhe dimensões com base no tamanho e na tela atual
     const vw = stage.clientWidth;
     const vh = stage.clientHeight;
 
-    // Alvos aproximados de colunas/linhas
     let targetCols, targetRows;
     if (sizeKey === 'S') { targetCols = 21; targetRows = 15; }
     else if (sizeKey === 'M') { targetCols = 35; targetRows = 25; }
     else if (sizeKey === 'G') { targetCols = 51; targetRows = 35; }
     else { targetCols = 69; targetRows = 49; } // 'X'
 
-    // Mantém proporção aproximada da área disponível
     const ratio = vw / vh;
-    if (ratio > 1) { // paisagem
-      targetCols = Math.round(targetCols * ratio);
-    } else {
-      targetRows = Math.round(targetRows / ratio);
-    }
+    if (ratio > 1) targetCols = Math.round(targetCols * ratio);
+    else targetRows = Math.round(targetRows / ratio);
+
     return { cols: odd(clamp(targetCols, 15, 199)), rows: odd(clamp(targetRows, 11, 199)) };
   }
 
-  // ============================
-  // Geração do labirinto (DFS)
-  // ============================
+  // ---------- GERAÇÃO DE LABIRINTO (DFS Backtracker) ----------
   function makeGrid(w, h, fill=1) {
     const g = new Array(h);
-    for (let y=0; y<h; y++) {
-      g[y] = new Array(w).fill(fill);
-    }
+    for (let y=0; y<h; y++) g[y] = new Array(w).fill(fill);
     return g;
   }
 
   function neighborsCarvables(x, y, g) {
-    const dirs = [
-      [0, -2], [2, 0], [0, 2], [-2, 0]
-    ];
-    // Embaralhar direções
+    const dirs = [[0,-2],[2,0],[0,2],[-2,0]];
     for (let i = dirs.length - 1; i > 0; i--) {
       const j = (Math.random()* (i+1))|0;
       [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
@@ -76,20 +79,16 @@
 
   function generateMaze(w, h) {
     const g = makeGrid(w, h, 1);
-    // Ponto inicial em coordenada ímpar
     let sx = 1, sy = 1;
     g[sy][sx] = 0;
-
     const stack = [[sx, sy]];
     while (stack.length) {
       const [cx, cy] = stack[stack.length - 1];
       const ns = neighborsCarvables(cx, cy, g);
-      if (!ns.length) {
-        stack.pop();
-      } else {
+      if (!ns.length) stack.pop();
+      else {
         const [nx, ny, dx, dy] = choice(ns);
-        // abre parede entre (cx,cy) e (nx,ny)
-        g[cy + dy/2][cx + dx/2] = 0;
+        g[cy + dy/2][cx + dx/2] = 0; // abre parede
         g[ny][nx] = 0;
         stack.push([nx, ny]);
       }
@@ -97,45 +96,38 @@
     return g;
   }
 
-  // ============================
-  // Renderização
-  // ============================
+  // ---------- RENDERIZAÇÃO ----------
   function fitCanvas() {
-    // Calcula o tamanho do tile para caber com margens
-    const pad = 24; // px
+    const pad = 24;
     const availW = stage.clientWidth - pad*2;
     const availH = stage.clientHeight - pad*2;
     tile = Math.floor(Math.min(availW / W, availH / H));
     tile = Math.max(tile, 6);
-    const cw = tile * W;
-    const ch = tile * H;
-    canvas.width = cw;
-    canvas.height = ch;
+    canvas.width = tile * W;
+    canvas.height = tile * H;
+  }
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
   function draw() {
-    // Fundo
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Labirinto
     for (let y=0; y<H; y++) {
       for (let x=0; x<W; x++) {
-        ctx.fillStyle = getComputedStyle(document.documentElement)
-          .getPropertyValue(grid[y][x] ? '--wall' : '--path').trim();
+        ctx.fillStyle = grid[y][x] ? cssVar('--wall') : cssVar('--path');
         ctx.fillRect(x*tile, y*tile, tile, tile);
       }
     }
 
-    // Objetivo
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--goal').trim();
+    ctx.fillStyle = cssVar('--goal');
     roundRect(ctx, goal.x*tile+1, goal.y*tile+1, tile-2, tile-2, Math.min(8, tile/3), true);
 
-    // Player
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player').trim();
+    ctx.fillStyle = cssVar('--player');
     roundRect(ctx, player.x*tile+2, player.y*tile+2, tile-4, tile-4, Math.min(10, tile/2.5), true);
 
-    // “brilho” sobre o player
     ctx.globalAlpha = 0.07;
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
@@ -154,9 +146,7 @@
     if (fill) ctx.fill();
   }
 
-  // ============================
-  // Lógica de jogo
-  // ============================
+  // ---------- LÓGICA ----------
   function canMove(nx, ny) {
     if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
     return grid[ny][nx] === 0;
@@ -174,6 +164,7 @@
   function checkWin() {
     if (player.x === goal.x && player.y === goal.y) {
       winOverlay.classList.add('show');
+      stopHold(); // para o movimento contínuo ao vencer
     }
   }
 
@@ -190,78 +181,179 @@
     draw();
   }
 
-  // ============================
-  // Entradas (teclado / toque / dpad)
-  // ============================
-  const keys = new Map([
-    ['ArrowUp', [0,-1]], ['KeyW', [0,-1]],
-    ['ArrowDown', [0,1]], ['KeyS', [0,1]],
-    ['ArrowLeft', [-1,0]], ['KeyA', [-1,0]],
-    ['ArrowRight', [1,0]], ['KeyD', [1,0]],
+  // ---------- MOVIMENTO CONTÍNUO (segurar botão/tecla) ----------
+  function startHold(dir) {
+    holdState.dir = dir;
+    if (holdState.running) return;
+    holdState.running = true;
+    // passo inicial imediato
+    move(dir[0], dir[1]);
+    holdState.intId = setInterval(() => {
+      move(dir[0], dir[1]);
+    }, holdState.delay);
+  }
+
+  function stopHold() {
+    holdState.running = false;
+    holdState.dir = null;
+    if (holdState.intId) {
+      clearInterval(holdState.intId);
+      holdState.intId = null;
+    }
+  }
+
+  // Botões abaixo do jogo (mouse/touch)
+  underControls.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('.uc-btn');
+    if (!btn) return;
+    e.preventDefault();
+    const d = btn.getAttribute('data-d');
+    const dir = d === 'up' ? [0,-1] : d === 'down' ? [0,1] : d === 'left' ? [-1,0] : [1,0];
+    startHold(dir);
+    // desbloqueia áudio após 1º gesto
+    resumeAudioIfNeeded();
+  });
+  // Encerrar no pointerup/out/cancel fora também
+  ['pointerup','pointercancel','pointerleave'].forEach(type => {
+    underControls.addEventListener(type, stopHold);
+  });
+
+  // Teclado com “hold”
+  const dirByKey = new Map([
+    ['ArrowUp',[0,-1]],  ['KeyW',[0,-1]],
+    ['ArrowDown',[0,1]], ['KeyS',[0,1]],
+    ['ArrowLeft',[-1,0]],['KeyA',[-1,0]],
+    ['ArrowRight',[1,0]],['KeyD',[1,0]],
   ]);
 
   window.addEventListener('keydown', (e) => {
-    const m = keys.get(e.code);
-    if (m) {
-      e.preventDefault();
-      move(m[0], m[1]);
+    const dir = dirByKey.get(e.code);
+    if (!dir) return;
+    e.preventDefault();
+    // inicia hold se mudou a direção
+    if (!holdState.running || (holdState.dir && (holdState.dir[0] !== dir[0] || holdState.dir[1] !== dir[1]))) {
+      stopHold();
+      startHold(dir);
     }
+    resumeAudioIfNeeded();
     if ((e.code === 'Enter' || e.code === 'Space') && winOverlay.classList.contains('show')) {
       newGame();
     }
   }, { passive:false });
 
-  // Touch swipe
-  let tStart = null;
-  canvas.addEventListener('touchstart', (e) => {
-    if (e.touches.length) {
-      const t = e.touches[0];
-      tStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+  window.addEventListener('keyup', (e) => {
+    if (dirByKey.has(e.code)) {
+      stopHold();
     }
   }, { passive:true });
 
-  canvas.addEventListener('touchend', (e) => {
-    if (!tStart) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - tStart.x;
-    const dy = t.clientY - tStart.y;
-    const ax = Math.abs(dx), ay = Math.abs(dy);
-    const TH = 24; // limiar em px
-    if (ax > ay && ax > TH) move(dx>0?1:-1, 0);
-    else if (ay > TH) move(0, dy>0?1:-1);
-    tStart = null;
+  // ---------- ÁUDIO: MELODIA ALEGRE "CLÁSSICA" (Web Audio API) ----------
+  // Gera uma pequena sequência em Dó maior, com arpejos e cadência simples.
+  let actx = null, masterGain = null, musicOn = false;
+
+  function initAudio() {
+    if (actx) return;
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = actx.createGain();
+    masterGain.gain.value = parseFloat(vol.value);
+    masterGain.connect(actx.destination);
+  }
+
+  function resumeAudioIfNeeded() {
+    if (!actx) initAudio();
+    if (actx.state === 'suspended') actx.resume();
+  }
+
+  vol.addEventListener('input', () => {
+    if (!masterGain) return;
+    masterGain.gain.value = parseFloat(vol.value);
   });
 
-  // D-Pad
-  dpad.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-d]');
-    if (!btn) return;
-    const d = btn.getAttribute('data-d');
-    if (d === 'up') move(0,-1);
-    else if (d === 'down') move(0,1);
-    else if (d === 'left') move(-1,0);
-    else if (d === 'right') move(1,0);
+  // Toca nota com envelope curto
+  function playNote(freq, startTime, duration=0.28) {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine';                 // timbre simples “clássico”
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.6, startTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0.0, startTime + duration);
+
+    osc.connect(gain).connect(masterGain);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  // Escala C maior (Hz)
+  const NOTE = {
+    C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+    C5:523.25, D5:587.33, E5:659.25, G5:783.99
+  };
+
+  // frase de 2 compassos, alegre (arpejos e passo conjunto), ~ 2.4s e loop
+  const phrase = [
+    NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5,
+    NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
+    NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4,
+    NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4
+  ];
+  const beatDur = 0.15; // 1 batida ~150ms
+
+  let loopTimer = null;
+
+  function startMusic() {
+    initAudio();
+    if (musicOn) return;
+    musicOn = true;
+    musicToggle.setAttribute('aria-pressed', 'true');
+    musicToggle.textContent = '🎵 Música: Ligada';
+
+    const schedule = () => {
+      const t0 = actx.currentTime + 0.05;
+      phrase.forEach((f, i) => {
+        playNote(f, t0 + i*beatDur, beatDur*0.95);
+      });
+    };
+    schedule();
+    loopTimer = setInterval(schedule, phrase.length * beatDur * 1000);
+  }
+
+  function stopMusic() {
+    musicOn = false;
+    musicToggle.setAttribute('aria-pressed', 'false');
+    musicToggle.textContent = '🎵 Música: Desligada';
+    if (loopTimer) {
+      clearInterval(loopTimer);
+      loopTimer = null;
+    }
+  }
+
+  musicToggle.addEventListener('click', () => {
+    resumeAudioIfNeeded();
+    if (!musicOn) startMusic();
+    else stopMusic();
   });
 
-  // Botões UI
-  newBtn.addEventListener('click', newGame);
-  againBtn.addEventListener('click', newGame);
-  sizeSel.addEventListener('change', newGame);
+  // ---------- UI BÁSICA ----------
+  newBtn.addEventListener('click', () => { newGame(); });
+  againBtn.addEventListener('click', () => { newGame(); });
+
+  sizeSel.addEventListener('change', () => {
+    newGame();
+  });
 
   // Ajusta ao redimensionar
   let resizeTO;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTO);
     resizeTO = setTimeout(() => {
-      // Reajusta apenas o canvas (mantém o mesmo labirinto)
       fitCanvas();
       draw();
     }, 120);
   });
 
-  // Inicializa
-  if (Math.min(window.innerWidth, window.innerHeight) < 640) {
-    sizeSel.value = 'S';
-  }
+  // ---------- INICIALIZAÇÃO ----------
+  if (Math.min(window.innerWidth, window.innerHeight) < 640) sizeSel.value = 'S';
   newGame();
 })();
