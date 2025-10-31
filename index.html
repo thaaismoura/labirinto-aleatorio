@@ -7,17 +7,19 @@
   <link rel="stylesheet" href="style.css" />
   <!--
     © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+    Código base criado com auxílio do ChatGPT.
   -->
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>🧩 Labirinto Aleatório</h1>
+      <h1>🧩 Labirinto Aleatório <span id="levelTag" class="badge">Nível 1</span></h1>
       <div class="controls">
-        <label for="sizeSel" class="hint">Tamanho:</label>
+        <label for="sizeSel" class="hint">Tamanho (livre):</label>
         <select id="sizeSel" aria-label="Tamanho do labirinto">
+          <option value="AUTO" selected>Automático por nível</option>
           <option value="S">Pequeno</option>
-          <option value="M" selected>Médio</option>
+          <option value="M">Médio</option>
           <option value="G">Grande</option>
           <option value="X">Gigante</option>
         </select>
@@ -37,9 +39,12 @@
 
       <div class="overlay" id="winOverlay" role="dialog" aria-modal="true">
         <div class="card">
-          <h2>🎉 Você venceu!</h2>
-          <p>Chegou ao objetivo. Quer tentar outro?</p>
-          <button class="btn" id="againBtn">Jogar de novo</button>
+          <h2 id="winTitle">🎉 Você venceu!</h2>
+          <p id="winDesc">Nível concluído. Bora subir o desafio?</p>
+          <div class="row">
+            <button class="btn" id="againBtn">Repetir nível</button>
+            <button class="btn primary" id="nextBtn">Próximo nível ▶</button>
+          </div>
         </div>
       </div>
     </div>
@@ -57,9 +62,10 @@
     </div>
 
     <footer>
-      <footer class="site-footer">
-    <small>© 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.</small>
-      <small>Controles: <strong>Setas/WASD</strong> (PC) • Segure os botões abaixo (celular/PC)</small>
+      <small>
+        © 2025 <strong>Thaís Moura</strong> — Licenciado sob MIT. Código-fonte no GitHub.
+      </small>
+      <small>Controles: <strong>Segure</strong> Setas/WASD (PC) • <strong>Segure</strong> os botões abaixo (celular/PC)</small>
     </footer>
   </div>
 
