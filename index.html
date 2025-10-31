@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Labirinto Aleatório</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🧩 Labirinto Aleatório</h1>
+      <div class="controls">
+        <label for="sizeSel" class="hint">Tamanho:</label>
+        <select id="sizeSel" aria-label="Tamanho do labirinto">
+          <option value="S">Pequeno</option>
+          <option value="M" selected>Médio</option>
+          <option value="G">Grande</option>
+          <option value="X">Gigante</option>
+        </select>
+        <button id="newBtn" class="btn">Novo labirinto</button>
+      </div>
+    </header>
+
+    <div class="canvas-wrap" id="stage">
+      <canvas id="game" width="900" height="600" aria-label="Jogo Labirinto"></canvas>
+
+      <div class="overlay" id="winOverlay" role="dialog" aria-modal="true">
+        <div class="card">
+          <h2>🎉 Você venceu!</h2>
+          <p>Chegou ao objetivo. Quer tentar outro?</p>
+          <button class="btn" id="againBtn">Jogar de novo</button>
+        </div>
+      </div>
+
+      <!-- D-Pad para mobile -->
+      <div class="dpad" aria-hidden="false" id="dpad" title="Controles de direção">
+        <span class="sp"></span>
+        <button data-d="up" aria-label="Cima">▲</button>
+        <span class="sp"></span>
+        <button data-d="left" aria-label="Esquerda">◀</button>
+        <span class="sp"></span>
+        <button data-d="right" aria-label="Direita">▶</button>
+        <span class="sp"></span>
+        <button data-d="down" aria-label="Baixo">▼</button>
+        <span class="sp"></span>
+      </div>
+    </div>
+
+    <footer>
+      <small>Controles: <strong>Setas/WASD</strong> no PC • <strong>Swipe ou D-Pad</strong> no celular</small>
+      <small>Feito com ❤ e JS Vanilla</small>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
