@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Labirinto Aleatório</title>
   <link rel="stylesheet" href="style.css" />
+  <!--
+    © 2025 Fernanda de Almeida Oliveira. Todos os direitos reservados.
+    Código base criado com auxílio do ChatGPT. Licença sugerida: MIT (opcional).
+  -->
 </head>
 <body>
   <div class="wrap">
@@ -18,7 +22,14 @@
           <option value="G">Grande</option>
           <option value="X">Gigante</option>
         </select>
+
         <button id="newBtn" class="btn">Novo labirinto</button>
+
+        <div class="music-controls">
+          <button id="musicToggle" class="btn" aria-pressed="false" aria-label="Alternar música">🎵 Música: Desligada</button>
+          <label class="hint" for="vol">Vol.</label>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Volume da música">
+        </div>
       </div>
     </header>
 
@@ -32,24 +43,26 @@
           <button class="btn" id="againBtn">Jogar de novo</button>
         </div>
       </div>
+    </div>
 
-      <!-- D-Pad para mobile -->
-      <div class="dpad" aria-hidden="false" id="dpad" title="Controles de direção">
-        <span class="sp"></span>
-        <button data-d="up" aria-label="Cima">▲</button>
-        <span class="sp"></span>
-        <button data-d="left" aria-label="Esquerda">◀</button>
-        <span class="sp"></span>
-        <button data-d="right" aria-label="Direita">▶</button>
-        <span class="sp"></span>
-        <button data-d="down" aria-label="Baixo">▼</button>
-        <span class="sp"></span>
+    <!-- CONTROLES ABAIXO DO JOGO -->
+    <div class="under-controls" id="underControls" aria-label="Controles de movimento">
+      <div class="uc-row">
+        <button class="uc-btn" data-d="up" aria-label="Cima">▲</button>
+      </div>
+      <div class="uc-row">
+        <button class="uc-btn" data-d="left" aria-label="Esquerda">◀</button>
+        <button class="uc-btn" data-d="down" aria-label="Baixo">▼</button>
+        <button class="uc-btn" data-d="right" aria-label="Direita">▶</button>
       </div>
     </div>
 
     <footer>
-      <small>Controles: <strong>Setas/WASD</strong> no PC • <strong>Swipe ou D-Pad</strong> no celular</small>
-      <small>Feito com ❤ e JS Vanilla</small>
+      <small>
+        © 2025 <strong>Thaís Moura</strong>. Todos os direitos reservados.
+       Licença sugerida: MIT
+      </small>
+      <small>Controles: <strong>Setas/WASD</strong> (PC) • Segure os botões abaixo (celular/PC)</small>
     </footer>
   </div>
 
