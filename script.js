@@ -1,5 +1,5 @@
 /*
-    © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
 */
 
 (() => {
@@ -9,25 +9,42 @@
   const sizeSel = document.getElementById('sizeSel');
   const newBtn = document.getElementById('newBtn');
   const againBtn = document.getElementById('againBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const winOverlay = document.getElementById('winOverlay');
+  const winTitle = document.getElementById('winTitle');
+  const winDesc = document.getElementById('winDesc');
+  const levelTag = document.getElementById('levelTag');
   const stage = document.getElementById('stage');
   const underControls = document.getElementById('underControls');
   const musicToggle = document.getElementById('musicToggle');
   const vol = document.getElementById('vol');
 
+  // ---------- CONFIG DE NÍVEIS ----------
+  // cada nível cresce o tamanho do labirinto e reduz o delay (mais rápido)
+  const LEVELS = [
+    { cols: 15, rows: 11, delay: 110 }, // bem fácil
+    { cols: 21, rows: 15, delay: 95  },
+    { cols: 27, rows: 19, delay: 85  },
+    { cols: 33, rows: 23, delay: 75  },
+    { cols: 41, rows: 31, delay: 70  },
+    { cols: 51, rows: 35, delay: 65  },
+    { cols: 61, rows: 45, delay: 60  },
+    { cols: 71, rows: 51, delay: 55  }
+  ];
+  let currentLevel = 1;
+
   // ---------- ESTADO DO JOGO ----------
   let grid = [];        // 0 caminho | 1 parede
-  let W = 41, H = 31;   // colunas x linhas (ímpares)
+  let W = 15, H = 11;   // colunas x linhas (ímpares)
   let tile = 16;
   let player = {x:1, y:1};
   let goal = {x: W-2, y: H-2};
 
-  // Movimento contínuo
+  // Movimento contínuo (segurar acelera por nível)
   const holdState = {
-    // direção atual pressionada pelos botões abaixo (ou teclado)
-    dir: null,          // [dx, dy]
-    intId: null,        // setInterval id
-    delay: 100,         // ms entre passos
+    dir: null,
+    intId: null,
+    delay: 90,     // será substituído por delay do nível
     running: false
   };
 
@@ -36,24 +53,29 @@
   const choice = arr => arr[(Math.random() * arr.length) | 0];
   const odd = n => n % 2 ? n : n-1;
 
-  function dimsFor(sizeKey) {
-    const vw = stage.clientWidth;
-    const vh = stage.clientHeight;
-
-    let targetCols, targetRows;
-    if (sizeKey === 'S') { targetCols = 21; targetRows = 15; }
-    else if (sizeKey === 'M') { targetCols = 35; targetRows = 25; }
-    else if (sizeKey === 'G') { targetCols = 51; targetRows = 35; }
-    else { targetCols = 69; targetRows = 49; } // 'X'
-
-    const ratio = vw / vh;
-    if (ratio > 1) targetCols = Math.round(targetCols * ratio);
-    else targetRows = Math.round(targetRows / ratio);
-
-    return { cols: odd(clamp(targetCols, 15, 199)), rows: odd(clamp(targetRows, 11, 199)) };
+  // tema/cores por nível (maze + player)
+  function setThemeForLevel(level) {
+    // gera um hue baseado no nível e aplica variações
+    const baseHue = (level * 47) % 360;
+    const wall = `hsl(${baseHue}, 22%, 18%)`;
+    const path = `hsl(${baseHue}, 30%, 8%)`;
+    const player = `hsl(${(baseHue+40)%360}, 90%, 55%)`;
+    const goal = `hsl(${(baseHue+320)%360}, 80%, 55%)`;
+    const ring = `hsla(${baseHue}, 100%, 100%, 0.07)`;
+    const root = document.documentElement.style;
+    root.setProperty('--wall', wall);
+    root.setProperty('--path', path);
+    root.setProperty('--player', player);
+    root.setProperty('--goal', goal);
+    root.setProperty('--ring', ring);
   }
 
-  // ---------- GERAÇÃO DE LABIRINTO (DFS Backtracker) ----------
+  function dimsForAutoLevel() {
+    const idx = clamp(currentLevel-1, 0, LEVELS.length-1);
+    return { cols: LEVELS[idx].cols, rows: LEVELS[idx].rows, delay: LEVELS[idx].delay };
+  }
+
+  // ---------- GERAÇÃO (DFS Backtracker) ----------
   function makeGrid(w, h, fill=1) {
     const g = new Array(h);
     for (let y=0; y<h; y++) g[y] = new Array(w).fill(fill);
@@ -87,7 +109,7 @@
       if (!ns.length) stack.pop();
       else {
         const [nx, ny, dx, dy] = choice(ns);
-        g[cy + dy/2][cx + dx/2] = 0; // abre parede
+        g[cy + dy/2][cx + dx/2] = 0;
         g[ny][nx] = 0;
         stack.push([nx, ny]);
       }
@@ -95,7 +117,7 @@
     return g;
   }
 
-  // ---------- RENDERIZAÇÃO ----------
+  // ---------- RENDER ----------
   function fitCanvas() {
     const pad = 24;
     const availW = stage.clientWidth - pad*2;
@@ -127,12 +149,11 @@
     ctx.fillStyle = cssVar('--player');
     roundRect(ctx, player.x*tile+2, player.y*tile+2, tile-4, tile-4, Math.min(10, tile/2.5), true);
 
-    ctx.globalAlpha = 0.07;
-    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = cssVar('--ring');
     ctx.beginPath();
     ctx.arc(player.x*tile + tile/2, player.y*tile + tile/2, tile*2.2, 0, Math.PI*2);
     ctx.fill();
-    ctx.globalAlpha = 1;
   }
 
   function roundRect(ctx, x, y, w, h, r, fill) {
@@ -162,16 +183,34 @@
 
   function checkWin() {
     if (player.x === goal.x && player.y === goal.y) {
+      winTitle.textContent = `🎉 Nível ${currentLevel} concluído!`;
+      winDesc.textContent = `Excelente! Prepare-se para o nível ${currentLevel + 1}.`;
       winOverlay.classList.add('show');
-      stopHold(); // para o movimento contínuo ao vencer
+      stopHold();
     }
   }
 
-  function newGame() {
-    const key = sizeSel.value;
-    const { cols, rows } = dimsFor(key);
-    W = odd(cols);
-    H = odd(rows);
+  function applyLevel(levelNum) {
+    currentLevel = levelNum;
+    levelTag.textContent = `Nível ${currentLevel}`;
+    setThemeForLevel(currentLevel);
+
+    // tamanho e velocidade pelo nível (ou manual, se usuário escolher)
+    const mode = sizeSel.value;
+    if (mode === 'AUTO') {
+      const cfg = dimsForAutoLevel();
+      W = odd(cfg.cols);
+      H = odd(cfg.rows);
+      holdState.delay = cfg.delay;
+    } else {
+      // tamanhos manuais fixos, mas ainda acelera com nível
+      const map = { S:[21,15], M:[35,25], G:[51,35], X:[69,49] };
+      const [cols, rows] = map[mode] || [35,25];
+      W = odd(cols); H = odd(rows);
+      const idx = clamp(currentLevel-1, 0, LEVELS.length-1);
+      holdState.delay = LEVELS[idx].delay;
+    }
+
     grid = generateMaze(W, H);
     player = {x:1, y:1};
     goal = {x: W-2, y: H-2};
@@ -180,16 +219,21 @@
     draw();
   }
 
-  // ---------- MOVIMENTO CONTÍNUO (segurar botão/tecla) ----------
+  function newGame() {
+    applyLevel(currentLevel);
+  }
+
+  function nextLevel() {
+    applyLevel(currentLevel + 1);
+  }
+
+  // ---------- MOVIMENTO CONTÍNUO ----------
   function startHold(dir) {
     holdState.dir = dir;
     if (holdState.running) return;
     holdState.running = true;
-    // passo inicial imediato
-    move(dir[0], dir[1]);
-    holdState.intId = setInterval(() => {
-      move(dir[0], dir[1]);
-    }, holdState.delay);
+    move(dir[0], dir[1]); // passo inicial
+    holdState.intId = setInterval(() => move(dir[0], dir[1]), holdState.delay);
   }
 
   function stopHold() {
@@ -201,7 +245,7 @@
     }
   }
 
-  // Botões abaixo do jogo (mouse/touch)
+  // Botões abaixo
   underControls.addEventListener('pointerdown', (e) => {
     const btn = e.target.closest('.uc-btn');
     if (!btn) return;
@@ -209,47 +253,31 @@
     const d = btn.getAttribute('data-d');
     const dir = d === 'up' ? [0,-1] : d === 'down' ? [0,1] : d === 'left' ? [-1,0] : [1,0];
     startHold(dir);
-    // desbloqueia áudio após 1º gesto
     resumeAudioIfNeeded();
   });
-  // Encerrar no pointerup/out/cancel fora também
-  ['pointerup','pointercancel','pointerleave'].forEach(type => {
-    underControls.addEventListener(type, stopHold);
-  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t => underControls.addEventListener(t, stopHold));
 
-  // Teclado com “hold”
+  // Teclado com hold
   const dirByKey = new Map([
     ['ArrowUp',[0,-1]],  ['KeyW',[0,-1]],
     ['ArrowDown',[0,1]], ['KeyS',[0,1]],
     ['ArrowLeft',[-1,0]],['KeyA',[-1,0]],
     ['ArrowRight',[1,0]],['KeyD',[1,0]],
   ]);
-
   window.addEventListener('keydown', (e) => {
     const dir = dirByKey.get(e.code);
     if (!dir) return;
     e.preventDefault();
-    // inicia hold se mudou a direção
     if (!holdState.running || (holdState.dir && (holdState.dir[0] !== dir[0] || holdState.dir[1] !== dir[1]))) {
       stopHold();
       startHold(dir);
     }
     resumeAudioIfNeeded();
-    if ((e.code === 'Enter' || e.code === 'Space') && winOverlay.classList.contains('show')) {
-      newGame();
-    }
   }, { passive:false });
+  window.addEventListener('keyup', (e) => { if (dirByKey.has(e.code)) stopHold(); }, { passive:true });
 
-  window.addEventListener('keyup', (e) => {
-    if (dirByKey.has(e.code)) {
-      stopHold();
-    }
-  }, { passive:true });
-
-  // ---------- ÁUDIO: MELODIA ALEGRE "CLÁSSICA" (Web Audio API) ----------
-  // Gera uma pequena sequência em Dó maior, com arpejos e cadência simples.
+  // ---------- ÁUDIO (mesmo da versão anterior) ----------
   let actx = null, masterGain = null, musicOn = false;
-
   function initAudio() {
     if (actx) return;
     actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -257,102 +285,67 @@
     masterGain.gain.value = parseFloat(vol.value);
     masterGain.connect(actx.destination);
   }
-
   function resumeAudioIfNeeded() {
     if (!actx) initAudio();
     if (actx.state === 'suspended') actx.resume();
   }
+  vol.addEventListener('input', () => { if (masterGain) masterGain.gain.value = parseFloat(vol.value); });
 
-  vol.addEventListener('input', () => {
-    if (!masterGain) return;
-    masterGain.gain.value = parseFloat(vol.value);
-  });
-
-  // Toca nota com envelope curto
-  function playNote(freq, startTime, duration=0.28) {
+  function playNote(freq, t0, dur=0.28) {
     const osc = actx.createOscillator();
     const gain = actx.createGain();
-    osc.type = 'sine';                 // timbre simples “clássico”
-    osc.frequency.setValueAtTime(freq, startTime);
-
-    gain.gain.setValueAtTime(0, startTime);
-    gain.gain.linearRampToValueAtTime(0.6, startTime + 0.02);
-    gain.gain.linearRampToValueAtTime(0.0, startTime + duration);
-
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(0.6, t0 + 0.02);
+    gain.gain.linearRampToValueAtTime(0.0, t0 + dur);
     osc.connect(gain).connect(masterGain);
-    osc.start(startTime);
-    osc.stop(startTime + duration + 0.02);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
   }
-
-  // Escala C maior (Hz)
   const NOTE = {
     C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
     C5:523.25, D5:587.33, E5:659.25, G5:783.99
   };
-
-  // frase de 2 compassos, alegre (arpejos e passo conjunto), ~ 2.4s e loop
-  const phrase = [
-    NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5,
-    NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
-    NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4,
-    NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4
-  ];
-  const beatDur = 0.15; // 1 batida ~150ms
-
+  const phrase = [ NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5, NOTE.B4, NOTE.G4, NOTE.E4, NOTE.C4,
+                   NOTE.F4, NOTE.A4, NOTE.C5, NOTE.A4, NOTE.G4, NOTE.E4, NOTE.D4, NOTE.C4 ];
+  const beatDur = 0.15;
   let loopTimer = null;
-
   function startMusic() {
     initAudio();
     if (musicOn) return;
     musicOn = true;
     musicToggle.setAttribute('aria-pressed', 'true');
     musicToggle.textContent = '🎵 Música: Ligada';
-
     const schedule = () => {
       const t0 = actx.currentTime + 0.05;
-      phrase.forEach((f, i) => {
-        playNote(f, t0 + i*beatDur, beatDur*0.95);
-      });
+      phrase.forEach((f, i) => playNote(f, t0 + i*beatDur, beatDur*0.95));
     };
     schedule();
     loopTimer = setInterval(schedule, phrase.length * beatDur * 1000);
   }
-
   function stopMusic() {
     musicOn = false;
     musicToggle.setAttribute('aria-pressed', 'false');
     musicToggle.textContent = '🎵 Música: Desligada';
-    if (loopTimer) {
-      clearInterval(loopTimer);
-      loopTimer = null;
-    }
+    if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
   }
+  musicToggle.addEventListener('click', () => { resumeAudioIfNeeded(); musicOn ? stopMusic() : startMusic(); });
 
-  musicToggle.addEventListener('click', () => {
-    resumeAudioIfNeeded();
-    if (!musicOn) startMusic();
-    else stopMusic();
-  });
+  // ---------- UI ----------
+  newBtn.addEventListener('click', () => newGame());
+  againBtn.addEventListener('click', () => { winOverlay.classList.remove('show'); newGame(); });
+  nextBtn.addEventListener('click', () => { winOverlay.classList.remove('show'); nextLevel(); });
+  sizeSel.addEventListener('change', () => newGame());
 
-  // ---------- UI BÁSICA ----------
-  newBtn.addEventListener('click', () => { newGame(); });
-  againBtn.addEventListener('click', () => { newGame(); });
+  // ---------- INICIALIZAÇÃO ----------
+  // começa no nível 1 (bem fácil) e tema correspondente
+  setThemeForLevel(currentLevel);
+  applyLevel(currentLevel);
 
-  sizeSel.addEventListener('change', () => {
-    newGame();
-  });
-
-  // Ajusta ao redimensionar
+  // Ajuste de canvas ao redimensionar
   let resizeTO;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTO);
-    resizeTO = setTimeout(() => {
-      fitCanvas();
-      draw();
-    }, 120);
+    resizeTO = setTimeout(() => { fitCanvas(); draw(); }, 120);
   });
-
-  // ---------- INICIALIZAÇÃO ----------
-  if (Math.min(window.innerWidth, window.innerHeight) < 640) sizeSel.value = 'S';
-  newGame();
 })();
