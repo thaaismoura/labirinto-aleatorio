@@ -1,3 +1,8 @@
+/*
+  © 2025 Fernanda de Almeida Oliveira. Todos os direitos reservados.
+  Código base criado com auxílio do ChatGPT. Licença sugerida: MIT (opcional).
+*/
+
 :root {
   --bg: #0f172a;        /* slate-900 */
   --panel: #111827cc;   /* gray-900 + alpha */
@@ -20,7 +25,7 @@ html, body {
 }
 
 .wrap {
-  min-height: 100svh; /* ocupa altura total, respeita barras móveis no mobile */
+  min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 12px;
@@ -52,7 +57,7 @@ header h1 {
   align-items: center;
   flex-wrap: wrap;
 }
-.btn, select {
+.btn, select, input[type="range"] {
   appearance: none;
   border: 1px solid #334155;
   background: #0b1226;
@@ -66,6 +71,7 @@ header h1 {
 }
 .btn:hover, select:hover { border-color: #4b5563; }
 .btn:active { transform: translateY(1px) scale(0.99); }
+.music-controls { display: inline-flex; gap: 8px; align-items: center; }
 
 .canvas-wrap {
   position: relative;
@@ -82,7 +88,7 @@ canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  touch-action: none; /* evita scroll ao arrastar */
+  touch-action: none;
 }
 
 /* HUD de resultado */
@@ -107,33 +113,36 @@ canvas {
 .card h2 { margin: 0 0 8px; }
 .card p { margin: 0 0 14px; opacity: .9; }
 
-/* Botões de direção (mobile) */
-.dpad {
-  position: absolute;
-  bottom: 14px;
-  right: 14px;
+.hint { opacity: .85; font-size: 12px; }
+
+footer small { opacity: .85; }
+a { color: var(--accent2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* CONTROLES ABAIXO DO JOGO */
+.under-controls {
   display: grid;
-  grid-template-columns: 56px 56px 56px;
-  grid-template-rows: 56px 56px 56px;
   gap: 8px;
-  opacity: .9;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
+  justify-items: center;
+  margin-top: -6px;
 }
-.dpad .sp { visibility: hidden; }
-.dpad button {
-  width: 56px; height: 56px;
+.uc-row { display: flex; gap: 8px; }
+.uc-btn {
+  width: 64px; height: 64px;
   border-radius: 14px;
   border: 1px solid #374151;
   background: #0c1530;
   color: var(--text);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 20px;
   box-shadow: 0 4px 16px #0006, inset 0 2px 12px #0008;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
-.hint { opacity: .8; font-size: 12px; }
+.uc-btn:active { transform: translateY(1px) scale(0.99); }
 
-footer small { opacity: .8; }
-a { color: var(--accent2); text-decoration: none; }
-a:hover { text-decoration: underline; }
+/* responsividade dos botões */
+@media (max-width: 480px) {
+  .uc-btn { width: 56px; height: 56px; font-size: 18px; }
+}
