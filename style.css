@@ -1,17 +1,20 @@
 /*
-© 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  Código base criado com auxílio do ChatGPT.
 */
 
 :root {
-  --bg: #0f172a;        /* slate-900 */
-  --panel: #111827cc;   /* gray-900 + alpha */
-  --accent: #22c55e;    /* green-500 */
-  --accent2: #60a5fa;   /* blue-400 */
-  --wall: #1f2937;      /* gray-800 */
-  --path: #0b1022;      /* deep */
-  --player: #f59e0b;    /* amber-500 */
-  --goal: #ef4444;      /* red-500 */
-  --text: #e5e7eb;      /* gray-200 */
+  --bg: #0f172a;
+  --panel: #111827cc;
+  --accent: #22c55e;
+  --accent2: #60a5fa;
+
+  /* estas variáveis mudam por nível via JS */
+  --wall: #1f2937;   /* parede */
+  --path: #0b1022;   /* caminho */
+  --player: #f59e0b; /* bolinha */
+  --goal: #ef4444;   /* objetivo */
+  --ring: #ffffff11; /* brilho */
 }
 
 * { box-sizing: border-box; }
@@ -19,7 +22,7 @@ html, body {
   margin: 0;
   height: 100%;
   background: radial-gradient(1200px 800px at 20% 10%, #101a3b 0%, var(--bg) 50%, #090d1d 100%);
-  color: var(--text);
+  color: #e5e7eb;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
 }
 
@@ -43,24 +46,24 @@ header, footer {
   box-shadow: 0 10px 30px #00000055;
 }
 
-header h1 {
-  font-size: clamp(16px, 3.5vw, 22px);
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: .2px;
+header h1 { font-size: clamp(16px, 3.5vw, 22px); margin: 0; font-weight: 700; }
+.badge {
+  margin-left: 8px;
+  background: #0b1226;
+  border: 1px solid #334155;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
 .controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
 .btn, select, input[type="range"] {
   appearance: none;
   border: 1px solid #334155;
   background: #0b1226;
-  color: var(--text);
+  color: #e5e7eb;
   padding: 8px 12px;
   border-radius: 12px;
   font-weight: 600;
@@ -70,7 +73,9 @@ header h1 {
 }
 .btn:hover, select:hover { border-color: #4b5563; }
 .btn:active { transform: translateY(1px) scale(0.99); }
+.btn.primary { background: #0e1a38; border-color: #3b82f6; }
 .music-controls { display: inline-flex; gap: 8px; align-items: center; }
+.hint { opacity: .85; font-size: 12px; }
 
 .canvas-wrap {
   position: relative;
@@ -83,14 +88,9 @@ header h1 {
   box-shadow: 0 30px 60px #0000006c inset, 0 10px 40px #00000070;
 }
 
-canvas {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  touch-action: none;
-}
+canvas { display: block; max-width: 100%; height: auto; touch-action: none; }
 
-/* HUD de resultado */
+/* HUD */
 .overlay {
   position: absolute;
   inset: 0;
@@ -106,19 +106,14 @@ canvas {
   padding: 18px;
   border-radius: 16px;
   text-align: center;
-  max-width: 360px;
+  max-width: 420px;
   box-shadow: 0 10px 30px #0008;
 }
 .card h2 { margin: 0 0 8px; }
-.card p { margin: 0 0 14px; opacity: .9; }
+.card p { margin: 0 12px 14px; opacity: .9; }
+.card .row { display: flex; gap: 8px; justify-content: center; }
 
-.hint { opacity: .85; font-size: 12px; }
-
-footer small { opacity: .85; }
-a { color: var(--accent2); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-/* CONTROLES ABAIXO DO JOGO */
+/* Controles abaixo */
 .under-controls {
   display: grid;
   gap: 8px;
@@ -131,7 +126,7 @@ a:hover { text-decoration: underline; }
   border-radius: 14px;
   border: 1px solid #374151;
   background: #0c1530;
-  color: var(--text);
+  color: #e5e7eb;
   font-weight: 800;
   font-size: 20px;
   box-shadow: 0 4px 16px #0006, inset 0 2px 12px #0008;
@@ -141,7 +136,11 @@ a:hover { text-decoration: underline; }
 }
 .uc-btn:active { transform: translateY(1px) scale(0.99); }
 
-/* responsividade dos botões */
+footer small { opacity: .85; }
+a { color: var(--accent2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* responsivo */
 @media (max-width: 480px) {
   .uc-btn { width: 56px; height: 56px; font-size: 18px; }
 }
