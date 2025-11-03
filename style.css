@@ -1,5 +1,6 @@
 /*
   © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  Código base criado com auxílio do ChatGPT.
 */
 
 :root {
@@ -8,24 +9,22 @@
   --accent: #22c55e;
   --accent2: #60a5fa;
 
-  /* estas variáveis mudam por nível via JS */
-  --wall: #1f2937;   /* parede */
-  --path: #0b1022;   /* caminho */
-  --player: #f59e0b; /* bolinha */
-  --goal: #ef4444;   /* objetivo */
-  --ring: #ffffff11; /* brilho */
+  /* mudadas pelo JS por nível */
+  --wall: #1f2937;
+  --path: #0b1022;
+  --player: #f59e0b;
+  --goal: #ef4444;
+  --ring: #ffffff11;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   height: 100%;
   background: radial-gradient(1200px 800px at 20% 10%, #101a3b 0%, var(--bg) 50%, #090d1d 100%);
   color: #e5e7eb;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
 }
 
 .wrap {
@@ -33,10 +32,12 @@ html, body {
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 12px;
-  padding: 12px;
+  padding: clamp(8px, 2.5vw, 16px);
+  place-items: center;
 }
 
 header, footer {
+  width: min(100%, 1200px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -86,31 +87,18 @@ input[type="range"] {
 }
 
 .btn:hover,
-select:hover {
-  border-color: #4b5563;
-}
+select:hover { border-color: #4b5563; }
+.btn:active { transform: translateY(1px) scale(0.99); }
+.btn.primary { background: #0e1a38; border-color: #3b82f6; }
 
-.btn:active {
-  transform: translateY(1px) scale(0.99);
-}
+.music-controls { display: inline-flex; gap: 8px; align-items: center; }
+.hint { opacity: 0.85; font-size: 12px; }
 
-.btn.primary {
-  background: #0e1a38;
-  border-color: #3b82f6;
-}
-
-.music-controls {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.hint {
-  opacity: 0.85;
-  font-size: 12px;
-}
-
+/* =============== ÁREA DO JOGO (maior + responsiva) =============== */
 .canvas-wrap {
+  width: min(100%, 1100px);   /* ↑ limite largo no desktop */
+  aspect-ratio: 16 / 10;      /* proporção confortável */
+  padding: clamp(8px, 1.6vw, 16px);
   position: relative;
   display: grid;
   place-items: center;
@@ -119,6 +107,13 @@ select:hover {
   border: 1px solid #1f2937;
   background: linear-gradient(180deg, #0a0f22 0%, #060912 100%);
   box-shadow: 0 30px 60px #0000006c inset, 0 10px 40px #00000070;
+}
+
+@media (max-width: 900px) {
+  .canvas-wrap { aspect-ratio: 4 / 3; } /* tablets */
+}
+@media (max-width: 520px) {
+  .canvas-wrap { aspect-ratio: 1 / 1.05; } /* celulares: quase quadrado, ocupa bem a tela */
 }
 
 canvas {
@@ -137,10 +132,7 @@ canvas {
   background: #00000080;
   backdrop-filter: blur(3px);
 }
-
-.overlay.show {
-  display: grid;
-}
+.overlay.show { display: grid; }
 
 .card {
   background: #0b1226;
@@ -151,83 +143,43 @@ canvas {
   max-width: 420px;
   box-shadow: 0 10px 30px #0008;
 }
-
-.card h2 {
-  margin: 0 0 8px;
-}
-
-.card p {
-  margin: 0 12px 14px;
-  opacity: 0.9;
-}
-
-.card .row {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
+.card h2 { margin: 0 0 8px; }
+.card p { margin: 0 12px 14px; opacity: 0.9; }
+.card .row { display: flex; gap: 8px; justify-content: center; }
 
 /* CONTROLES ABAIXO DO JOGO */
 .under-controls {
+  width: min(100%, 1100px);
   display: grid;
   gap: 10px;
   justify-items: center;
   margin-top: 6px;
 }
-
-.uc-row {
-  display: flex;
-  gap: 10px;
-}
-
+.uc-row { display: flex; gap: 10px; }
 .uc-btn {
-  width: 90px;       /* aumentados */
-  height: 90px;      /* aumentados */
+  width: 90px;
+  height: 90px;
   border-radius: 20px;
   border: 1px solid #374151;
   background: #0c1530;
   color: #e5e7eb;
   font-weight: 800;
-  font-size: 30px;   /* setas maiores */
+  font-size: 30px;
   box-shadow: 0 6px 20px #0008, inset 0 2px 12px #0008;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none;
   touch-action: manipulation;
   transition: transform 0.08s ease, background 0.2s;
 }
+.uc-btn:hover { background: #182554; }
+.uc-btn:active { transform: translateY(2px) scale(0.97); }
 
-.uc-btn:hover {
-  background: #182554;
+@media (max-width: 520px) {
+  .uc-btn { width: 76px; height: 76px; font-size: 28px; }
 }
 
-.uc-btn:active {
-  transform: translateY(2px) scale(0.97);
-}
+/* Rodapé */
+footer { justify-content: center; font-size: 14px; }
+footer small { opacity: 0.9; }
 
-/* responsivo para telas pequenas */
-@media (max-width: 480px) {
-  .uc-btn {
-    width: 76px;
-    height: 76px;
-    font-size: 28px;
-  }
-}
-
-/* Rodapé simplificado */
-footer {
-  justify-content: center;
-  font-size: 14px;
-}
-
-footer small {
-  opacity: 0.9;
-}
-
-a {
-  color: var(--accent2);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
+a { color: var(--accent2); text-decoration: none; }
+a:hover { text-decoration: underline; }
