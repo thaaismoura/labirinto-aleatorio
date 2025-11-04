@@ -1,63 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Labirinto Aleatório</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="wrap">
-    <header class="bar">
-      <h1>🧩 Labirinto Aleatório <span id="levelTag" class="badge">Nível 1</span></h1>
-      <div class="controls">
-        <label for="sizeSel" class="hint">Tamanho:</label>
-        <select id="sizeSel" aria-label="Tamanho do labirinto">
-          <option value="AUTO" selected>Automático</option>
-          <option value="S">Pequeno</option>
-          <option value="M">Médio</option>
-          <option value="G">Grande</option>
-          <option value="X">Gigante</option>
-        </select>
-        <button id="newBtn" class="btn">Novo</button>
-      </div>
-    </header>
-
-    <main class="stage-wrap">
-      <div class="canvas-wrap" id="stage">
-        <!-- largura/altura iniciais só como fallback visual -->
-        <canvas id="game" width="640" height="480"></canvas>
-
-        <div class="overlay" id="winOverlay" aria-hidden="true">
-          <div class="card">
-            <h2 id="winTitle">🎉 Você venceu!</h2>
-            <p id="winDesc">Nível concluído. Bora subir o desafio?</p>
-            <div class="row">
-              <button class="btn" id="againBtn">Repetir</button>
-              <button class="btn primary" id="nextBtn">Próximo ▶</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- D-Pad (só aparece no mobile via CSS) -->
-        <div class="dpad" id="dpad" aria-label="Controles de direção">
-          <button class="key up"    data-dir="0,-1" aria-label="Cima">▲</button>
-          <div class="mid">
-            <button class="key left"  data-dir="-1,0" aria-label="Esquerda">◀</button>
-            <button class="key right" data-dir="1,0"  aria-label="Direita">▶</button>
-          </div>
-          <button class="key down"  data-dir="0,1"  aria-label="Baixo">▼</button>
-        </div>
-      </div>
-    </main>
-
-    <footer class="bar">
-      <small>© 2025 Thaís Moura — Jogo educativo</small>
-    </footer>
-  </div>
-
-  <!-- opcional: trilha. pode remover se quiser -->
-  <audio id="bgm" loop src="Lenny Pixels - Funky n Blinky - 8bit.mp3"></audio>
-  <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Labirinto Aleatório</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="menu">
+      <h1>Labirinto Aleatório</h1>
+      <button id="newMaze">Novo Labirinto</button>
+      <button id="up">↑</button>
+      <button id="left">←</button>
+      <button id="down">↓</button>
+      <button id="right">→</button>
+    </div>
+    <canvas id="mazeCanvas" width="600" height="600"></canvas>
+    <script src="script.js"></script>
+  </body>
 </html>
