@@ -1,7 +1,6 @@
 /*
-  © 2025 Thaís Moura — Licenciado sob MIT. Código-fonte no GitHub.
+  © 2025 Thaís Moura — Licenciado sob MIT.
 */
-
 (() => {
   // ---------- ELEMENTOS ----------
   const canvas = document.getElementById('game');
@@ -18,11 +17,11 @@
   const underControls = document.getElementById('underControls');
   const musicToggle = document.getElementById('musicToggle');
   const vol = document.getElementById('vol');
-  const bgm = document.getElementById('bgm'); // <audio> com sua trilha
+  const bgm = document.getElementById('bgm'); // pode não tocar; tratamos
 
   // ---------- CONFIG DE NÍVEIS ----------
   const LEVELS = [
-    { cols: 15, rows: 11, delay: 110 }, // bem fácil
+    { cols: 15, rows: 11, delay: 110 },
     { cols: 21, rows: 15, delay: 95  },
     { cols: 27, rows: 19, delay: 85  },
     { cols: 33, rows: 23, delay: 75  },
@@ -40,7 +39,7 @@
   let player = {x:1, y:1};
   let goal = {x: W-2, y: H-2};
 
-  // Movimento contínuo ao segurar
+  // Movimento contínuo
   const holdState = { dir: null, intId: null, delay: 90, running: false };
 
   // ---------- UTILIDADES ----------
@@ -49,7 +48,7 @@
   const odd = n => n % 2 ? n : n-1;
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  // Tema dinâmico por nível (muda cores a cada fase)
+  // Tema por nível
   function setThemeForLevel(level){
     const baseHue=(level*47)%360;
     const root=document.documentElement.style;
@@ -90,10 +89,12 @@
     g[sy][sx] = 0;
     const stack = [[sx, sy]];
     while (stack.length) {
-      const [cx, cy] = stack.at(-1);
+      const last = stack[stack.length - 1];   // <- sem .at(-1)
+      const cx = last[0], cy = last[1];
       const ns = neighborsCarvables(cx, cy, g);
-      if (!ns.length) stack.pop();
-      else {
+      if (!ns.length) {
+        stack.pop();
+      } else {
         const [nx, ny, dx, dy] = choice(ns);
         g[cy + dy/2][cx + dx/2] = 0; // abre parede entre as células
         g[ny][nx] = 0;
@@ -103,18 +104,19 @@
     return g;
   }
 
-  // ---------- DESENHO (com proteção para telas pequenas) ----------
+  // ---------- DESENHO ----------
   function fitCanvas() {
     const pad = 24;
-    const availW = stage.clientWidth - pad * 2;
-    const availH = stage.clientHeight - pad * 2;
+    const sw = Math.max(0, stage?.clientWidth  || 0);
+    const sh = Math.max(0, stage?.clientHeight || 0);
+    const availW = Math.max(200, sw - pad * 2);
+    const availH = Math.max(200, sh - pad * 2);
     tile = Math.floor(Math.min(availW / W, availH / H));
-    tile = Math.max(tile, 10); // <- mínimo aumentado (antes 6). Evita sumiço do player no celular.
-    canvas.width = tile * W;
-    canvas.height = tile * H;
+    tile = Math.max(tile, 10);
+    canvas.width = Math.max(100, tile * W);
+    canvas.height = Math.max(100, tile * H);
   }
 
-  // formas auxiliares
   function roundRect(ctx, x, y, w, h, r, fill) {
     const rr = Math.max(2, Math.min(r, Math.min(w, h)/2));
     ctx.beginPath();
@@ -151,28 +153,21 @@
     ctx.closePath();
   }
 
-  // player muda de forma a cada nível (com tamanhos mínimos seguros)
   function drawPlayerShape(level, x, y, size) {
-    const idx = (level - 1) % 6;      // ciclo de 6 formas
-    const s   = Math.max(6, size);    // tamanho mínimo do desenho
+    const idx = (level - 1) % 6;
+    const s   = Math.max(6, size);
     const r   = Math.max(3, Math.min(10, s / 2.5));
     const cx  = x + s/2, cy = y + s/2;
 
     ctx.save();
-    ctx.shadowBlur  = Math.min(s * 0.9, 20);  // brilho limitado para telas pequenas
+    ctx.shadowBlur  = Math.min(s * 0.9, 20);
     ctx.shadowColor = cssVar('--player');
     ctx.fillStyle   = cssVar('--player');
 
     switch (idx) {
-      case 0: // círculo
-        ctx.beginPath();
-        ctx.arc(cx, cy, Math.max(3, (s - 4) / 2), 0, Math.PI*2);
-        ctx.fill();
-        break;
-      case 1: // quadrado arredondado
-        roundRect(ctx, x + 2, y + 2, s - 4, s - 4, r, true);
-        break;
-      case 2: // losango
+      case 0: ctx.beginPath(); ctx.arc(cx, cy, Math.max(3, (s - 4) / 2), 0, Math.PI*2); ctx.fill(); break;
+      case 1: roundRect(ctx, x + 2, y + 2, s - 4, s - 4, r, true); break;
+      case 2:
         ctx.beginPath();
         ctx.moveTo(cx, y + 2);
         ctx.lineTo(x + s - 2, cy);
@@ -181,7 +176,7 @@
         ctx.closePath();
         ctx.fill();
         break;
-      case 3: // triângulo
+      case 3:
         ctx.beginPath();
         ctx.moveTo(cx, y + 2);
         ctx.lineTo(x + s - 2, y + s - 2);
@@ -189,24 +184,18 @@
         ctx.closePath();
         ctx.fill();
         break;
-      case 4: // estrela
-        drawStar(cx, cy, (s - 4) / 2, (s - 8) / 4, 5);
-        ctx.fill();
-        break;
-      case 5: // hexágono
-        drawPolygon(cx, cy, (s - 4) / 2, 6);
-        ctx.fill();
-        break;
+      case 4: drawStar(cx, cy, (s - 4) / 2, (s - 8) / 4, 5); ctx.fill(); break;
+      case 5: drawPolygon(cx, cy, (s - 4) / 2, 6); ctx.fill(); break;
     }
     ctx.restore();
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = 'black'; // seu tema mantém fundo escuro aqui
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // paredes com halo leve
+    // paredes
     ctx.save();
     ctx.shadowBlur  = Math.max(2, tile * 0.25);
     ctx.shadowColor = 'rgba(255,255,255,0.06)';
@@ -230,7 +219,7 @@
       }
     }
 
-    // objetivo com brilho
+    // objetivo
     ctx.save();
     ctx.shadowBlur  = Math.min(tile * 0.8, 14);
     ctx.shadowColor = cssVar('--goal');
@@ -238,7 +227,7 @@
     roundRect(ctx, goal.x * tile + 1, goal.y * tile + 1, tile - 2, tile - 2, Math.min(8, tile / 3), true);
     ctx.restore();
 
-    // player (com segurança de tamanho)
+    // player
     const px = player.x * tile + 2;
     const py = player.y * tile + 2;
     const ps = Math.max(6, tile - 4);
@@ -259,9 +248,9 @@
   }
   function checkWin() {
     if (player.x === goal.x && player.y === goal.y) {
-      winTitle.textContent = `🎉 Nível ${currentLevel} concluído!`;
-      winDesc.textContent  = `Excelente! Prepare-se para o nível ${currentLevel + 1}.`;
-      winOverlay.classList.add('show');
+      if (winTitle) winTitle.textContent = `🎉 Nível ${currentLevel} concluído!`;
+      if (winDesc)  winDesc.textContent  = `Excelente! Prepare-se para o nível ${currentLevel + 1}.`;
+      winOverlay?.classList.add('show');
       stopHold();
       playWinJingle();
     }
@@ -269,18 +258,18 @@
 
   function applyLevel(levelNum) {
     currentLevel = levelNum;
-    levelTag.textContent = `Nível ${currentLevel}`;
+    if (levelTag) levelTag.textContent = `Nível ${currentLevel}`;
     setThemeForLevel(currentLevel);
 
-    const mode = sizeSel.value;
+    const mode = sizeSel?.value || 'AUTO';
     if (mode === 'AUTO') {
       const cfg = dimsForAutoLevel();
       W = odd(cfg.cols); H = odd(cfg.rows);
       holdState.delay = cfg.delay;
     } else {
       const map = { S:[21,15], M:[35,25], G:[51,35], X:[69,49] };
-      const [cols, rows] = map[mode] || [35,25];
-      W = odd(cols); H = odd(rows);
+      const preset = map[mode] || [35,25];
+      W = odd(preset[0]); H = odd(preset[1]);
       const idx = clamp(currentLevel-1, 0, LEVELS.length-1);
       holdState.delay = LEVELS[idx].delay;
     }
@@ -288,7 +277,7 @@
     grid = generateMaze(W, H);
     player = {x:1, y:1};
     goal   = {x: W-2, y: H-2};
-    winOverlay.classList.remove('show');
+    winOverlay?.classList.remove('show');
     fitCanvas();
     draw();
   }
@@ -298,6 +287,7 @@
 
   // ---------- CONTROLES CONTÍNUOS ----------
   function startHold(dir) {
+    if (!dir) return;
     holdState.dir = dir;
     if (holdState.running) return;
     holdState.running = true;
@@ -308,15 +298,23 @@
     holdState.running = false;
     if (holdState.intId) { clearInterval(holdState.intId); holdState.intId = null; }
   }
-  underControls.addEventListener('pointerdown', (e) => {
-    const btn = e.target.closest('.uc-btn'); if (!btn) return;
-    e.preventDefault();
-    const d = btn.getAttribute('data-d');
-    const dir = d === 'up' ? [0,-1] : d === 'down' ? [0,1] : d === 'left' ? [-1,0] : [1,0];
-    startHold(dir);
-    tryAutoplay(); // se autoplay estiver bloqueado, o gesto destrava
-  });
-  ['pointerup','pointercancel','pointerleave'].forEach(t => underControls.addEventListener(t, stopHold));
+
+  // Controles visuais (se existirem)
+  if (underControls) {
+    underControls.addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest?.('.uc-btn'); if (!btn) return;
+      e.preventDefault();
+      const d = btn.getAttribute('data-d');
+      const dir = d === 'up' ? [0,-1] : d === 'down' ? [0,1] : d === 'left' ? [-1,0] : [1,0];
+      startHold(dir);
+      tryAutoplay();
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(t => {
+      underControls.addEventListener(t, stopHold);
+    });
+  }
+
+  // Teclado
   const dirByKey = new Map([
     ['ArrowUp',[0,-1]],  ['KeyW',[0,-1]],
     ['ArrowDown',[0,1]], ['KeyS',[0,1]],
@@ -335,94 +333,74 @@
   }, { passive:false });
   window.addEventListener('keyup', (e) => { if (dirByKey.has(e.code)) stopHold(); }, { passive:true });
 
-  // ---------- ÁUDIO: Trilha (<audio>) + SFX (Web Audio) ----------
+  // ---------- ÁUDIO (opcional) ----------
   let actx = null, masterGain = null;
-
   function initSfx(){
     if (actx) return;
-    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return; // navegador sem WebAudio
+    actx = new AC();
     masterGain = actx.createGain();
     masterGain.connect(actx.destination);
-    masterGain.gain.value = parseFloat(vol.value);
+    if (vol) masterGain.gain.value = parseFloat(vol.value) || 0.5;
   }
-
-  // volume controla trilha e sfx
-  vol.addEventListener('input', () => {
-    const v = parseFloat(vol.value);
-    bgm.volume = v;
-    if (masterGain) masterGain.gain.value = v;
-  });
-
-  // botão música (toggle play/pause)
-  function setMusicBtn(on){
-    musicToggle.setAttribute('aria-pressed', String(on));
-    musicToggle.textContent = on ? '🎵 Música: Ligada' : '🎵 Música: Desligada';
-  }
-  function refreshMusicBtn(){ setMusicBtn(!bgm.paused && !bgm.ended); }
-  bgm.addEventListener('play',  refreshMusicBtn);
-  bgm.addEventListener('pause', refreshMusicBtn);
-  bgm.addEventListener('ended', refreshMusicBtn);
-
-  musicToggle.addEventListener('click', async () => {
-    try {
-      if (bgm.paused) { await bgm.play(); } else { bgm.pause(); }
-    } catch (_) {
-      // fallback para navegadores chatos
-      try { bgm.muted = true; await bgm.play(); bgm.muted = false; } catch {}
-    } finally {
-      refreshMusicBtn();
-    }
-  });
-
-  // autoplay best-effort (na carga) + destrave na 1ª interação
   function tryAutoplay(){
-    bgm.volume = parseFloat(vol.value);
-    const p = bgm.play();
+    if (!bgm) return;
+    bgm.volume = (vol && parseFloat(vol.value)) || 0.5;
+    const p = bgm.play?.();
     if (p && typeof p.then === 'function') {
-      p.then(refreshMusicBtn).catch(() => {
-        const unlock = async () => {
-          try { await bgm.play(); refreshMusicBtn(); removeUnlock(); } catch {}
-        };
-        const evs = ['pointerdown','touchstart','keydown','click','visibilitychange','focus'];
-        function removeUnlock(){ evs.forEach(ev => window.removeEventListener(ev, unlock, true)); }
-        evs.forEach(ev => window.addEventListener(ev, unlock, true));
-        setTimeout(unlock, 800);
-      });
+      p.then(refreshMusicBtn).catch(()=>{/* ignorado */});
     } else {
       refreshMusicBtn();
     }
   }
+  function setMusicBtn(on){
+    if (!musicToggle) return;
+    musicToggle.setAttribute('aria-pressed', String(on));
+    musicToggle.textContent = on ? '🎵 Música: Ligada' : '🎵 Música: Desligada';
+  }
+  function refreshMusicBtn(){ setMusicBtn(!!(bgm && !bgm.paused && !bgm.ended)); }
+  musicToggle?.addEventListener('click', async () => {
+    if (!bgm) return;
+    try { if (bgm.paused) { await bgm.play(); } else { bgm.pause(); } }
+    catch(_) {}
+    refreshMusicBtn();
+  });
+  vol?.addEventListener('input', () => {
+    if (bgm) bgm.volume = parseFloat(vol.value) || 0.5;
+    if (masterGain) masterGain.gain.value = parseFloat(vol.value) || 0.5;
+  });
 
-  // SFX de vitória (arpejo curto)
-  function playTone(freq, t0, dur=0.14, vol=0.35, a=0.005, r=0.06) {
-    initSfx();
+  function playTone(freq, t0, dur=0.14, volu=0.35, a=0.005, r=0.06) {
+    initSfx(); if (!actx || !masterGain) return;
     const osc = actx.createOscillator();
     const g = actx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, t0);
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(vol, t0+a);
+    g.gain.linearRampToValueAtTime(volu, t0+a);
     g.gain.linearRampToValueAtTime(0, t0+dur);
     osc.connect(g).connect(masterGain);
     osc.start(t0); osc.stop(t0+dur+r);
   }
   const NOTE = { C4:261.63, E4:329.63, G4:392.00, C5:523.25, E5:659.25 };
   function playWinJingle(){
+    if (!actx) initSfx();
     const t = actx ? actx.currentTime + 0.03 : 0.03;
     [NOTE.C4, NOTE.E4, NOTE.G4, NOTE.C5, NOTE.E5].forEach((f,i)=> playTone(f, t + i*0.08));
   }
 
   // ---------- UI ----------
-  newBtn.addEventListener('click', () => newGame());
-  againBtn.addEventListener('click', () => { winOverlay.classList.remove('show'); newGame(); });
-  nextBtn.addEventListener('click', () => { winOverlay.classList.remove('show'); nextLevel(); });
-  sizeSel.addEventListener('change', () => newGame());
+  newBtn?.addEventListener('click', () => newGame());
+  againBtn?.addEventListener('click', () => { winOverlay?.classList.remove('show'); newGame(); });
+  nextBtn?.addEventListener('click', () => { winOverlay?.classList.remove('show'); nextLevel(); });
+  sizeSel?.addEventListener('change', () => newGame());
 
   // ---------- INICIALIZAÇÃO ----------
   setThemeForLevel(currentLevel);
   applyLevel(currentLevel);
 
-  // tenta tocar após carregar (se bloqueado, primeira interação libera)
+  // autoplay best-effort
   window.addEventListener('load', () => setTimeout(tryAutoplay, 300));
 
   // resize com debounce
