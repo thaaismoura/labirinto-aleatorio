@@ -155,7 +155,7 @@
 
   function drawPlayerShape(level, x, y, size) {
     const idx = (level - 1) % 6;
-    const s   = Math.max(6, size);
+    const s   = 15;
     const r   = Math.max(3, Math.min(10, s / 2.5));
     const cx  = x + s/2, cy = y + s/2;
 
