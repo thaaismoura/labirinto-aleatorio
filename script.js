@@ -1,4 +1,8 @@
+/*
+  © 2025 — Mod responsivo
+*/
 (() => {
+  // ---------- ELEMENTOS ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
   const sizeSel = document.getElementById('sizeSel');
@@ -14,8 +18,9 @@
   const vol = document.getElementById('vol');
   const bgm = document.getElementById('bgm');
 
+  // ---------- CONFIG DE NÍVEIS ----------
   const LEVELS = [
-    { cols: 15, rows: 11, delay: 110 },
+    { cols: 15, rows: 11, delay: 110 }, // fácil
     { cols: 21, rows: 15, delay: 95  },
     { cols: 27, rows: 19, delay: 85  },
     { cols: 33, rows: 23, delay: 75  },
@@ -25,108 +30,330 @@
     { cols: 71, rows: 51, delay: 55  }
   ];
   let currentLevel = 1;
-  let grid = [], W = 15, H = 11, tile = 16;
+
+  // ---------- ESTADO ----------
+  let grid = [];        // 0 caminho | 1 parede
+  let W = 15, H = 11;   // colunas x linhas (ímpares)
+  let tile = 16;        // tamanho do bloco (calculado)
   let player = {x:1, y:1};
-  let goal = {x: W-2, y: H-2};
+  let goal   = {x: W-2, y: H-2};
 
-  const holdState = { dir: null, intId: null, delay: 90, running: false };
+  // ---------- CONTROLES CONTÍNUOS ----------
+  const holdState = { dir: null, running: false, delay: 90, intId: null };
 
-  // Tamanho fixo do jogador (não diminui conforme o labirinto aumenta)
+  // ---------- UTILIDADES ----------
+  // Tamanho fixo da bolinha (não diminui conforme o labirinto aumenta).
+  // Responsivo: um pouco menor no celular.
   const FIXED_PLAYER_PX = (Math.min(window.innerWidth, window.innerHeight) < 640) ? 16 : 20;
 
-  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-  const choice = arr => arr[(Math.random()*arr.length)|0];
-  const cssVar = (name)=>getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const choice = arr => arr[(Math.random() * arr.length) | 0];
+  const odd = n => n % 2 ? n : n-1;
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
+  // Tema dinâmico por nível (muda cores a cada fase)
   function setThemeForLevel(level){
     const baseHue=(level*47)%360;
     const root=document.documentElement.style;
-    root.setProperty('--bg', `hsl(${baseHue},28%,94%)`);
-    root.setProperty('--wall', `hsl(${baseHue},22%,18%)`);
-    root.setProperty('--path', `hsl(${baseHue},30%,8%)`);
-    root.setProperty('--player', `hsl(${(baseHue+40)%360},90%,55%)`);
-    root.setProperty('--goal', `hsl(${(baseHue+320)%360},80%,55%)`);
+    root.setProperty('--bg',    `hsl(${baseHue}, 28%, 94%)`);   // fundo claro, varia por nível
+    root.setProperty('--wall',  `hsl(${baseHue}, 22%, 18%)`);
+    root.setProperty('--path',  `hsl(${baseHue}, 30%, 8%)`);
+    root.setProperty('--player',`hsl(${(baseHue+40)%360}, 90%, 55%)`);
+    root.setProperty('--goal',  `hsl(${(baseHue+320)%360}, 80%, 55%)`);
+    root.setProperty('--ring',  `hsla(${baseHue}, 100%, 100%, 0.07)`);
   }
 
-  function makeGrid(w,h,fill=1){return Array.from({length:h},()=>Array(w).fill(fill));}
+  function dimsForAutoLevel(){
+    const idx = clamp(currentLevel-1, 0, LEVELS.length-1);
+    return { cols: LEVELS[idx].cols, rows: LEVELS[idx].rows, delay: LEVELS[idx].delay };
+  }
 
-  function generateMaze(w,h){
-    const g=makeGrid(w,h,1);
-    let sx=1,sy=1; g[sy][sx]=0;
-    const stack=[[sx,sy]];
-    const dirs=[[0,-2],[2,0],[0,2],[-2,0]];
-    while(stack.length){
-      const [cx,cy]=stack.at(-1);
-      const options=dirs.map(([dx,dy])=>[cx+dx,cy+dy,dx,dy]).filter(([nx,ny])=>
-        ny>0&&ny<h-1&&nx>0&&nx<w-1&&g[ny][nx]===1);
-      if(!options.length) stack.pop();
-      else{
-        const [nx,ny,dx,dy]=choice(options);
-        g[cy+dy/2][cx+dx/2]=0; g[ny][nx]=0; stack.push([nx,ny]);
+  // ---------- GERAÇÃO (DFS Backtracker) ----------
+  function makeGrid(w, h, fill=1) {
+    return Array.from({length:h}, () => Array(w).fill(fill));
+  }
+  function neighborsCarvables(x, y, g) {
+    const dirs = [[0,-2],[2,0],[0,2],[-2,0]];
+    // embaralha direções
+    for (let i = dirs.length - 1; i > 0; i--) {
+      const j = (Math.random()*(i+1))|0; [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+    const res = [];
+    for (const [dx,dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      if (ny > 0 && ny < g.length-1 && nx > 0 && nx < g[0].length-1 && g[ny][nx] === 1) {
+        res.push([nx, ny, dx, dy]);
       }
+    }
+    return res;
+  }
+  function generateMaze(w, h) {
+    const g = makeGrid(w, h, 1);
+    let sx = 1, sy = 1;
+    g[sy][sx] = 0;
+    const stack = [[sx, sy]];
+    while (stack.length) {
+      const [cx, cy] = stack.at(-1);
+      const ns = neighborsCarvables(cx, cy, g);
+      if (!ns.length) { stack.pop(); continue; }
+      const [nx, ny, dx, dy] = choice(ns);
+      g[cy + dy/2][cx + dx/2] = 0;
+      g[ny][nx] = 0;
+      stack.push([nx, ny]);
     }
     return g;
   }
 
+  // ---------- RESPONSIVIDADE DO CANVAS ----------
   function fitCanvas(){
-    const pad=24;
-    const availW=stage.clientWidth-pad*2;
-    const availH=stage.clientHeight-pad*2;
-    tile=Math.floor(Math.min(availW/W,availH/H));
-    tile=Math.max(tile,10);
-    canvas.width=tile*W; canvas.height=tile*H;
+    // usamos a área disponível dentro de #stage (definida no CSS)
+    const pad = 12; // padding visual da .canvas-wrap
+    const rect = stage.getBoundingClientRect();
+
+    // garante dimensões mínimas para não dar zero em alguns navegadores/estados
+    const availW = Math.max(200, rect.width  - pad*2);
+    const availH = Math.max(200, rect.height - pad*2);
+
+    // calcula o tamanho de cada tile para caber SEM rolagem
+    const tileRaw = Math.min(availW / W, availH / H);
+
+    // limites para uma boa experiência em mobile/desktop
+    const tileMin = 10;          // não fica pequeno demais
+    const tileMax = 42;          // não fica gigante em celular
+    tile = clamp(Math.floor(tileRaw), tileMin, tileMax);
+
+    canvas.width  = Math.floor(tile * W);
+    canvas.height = Math.floor(tile * H);
   }
 
-  function drawPlayerShape(level,x,y,size){
-    const idx=(level-1)%6;
-    const s=Math.max(6,size);
-    const cx=x+s/2,cy=y+s/2;
+  // ---------- DRAW ----------
+  function roundRect(ctx, x, y, w, h, r, fill){
+    const rr = Math.max(2, Math.min(r, Math.min(w, h)/2));
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x,   y+h, rr);
+    ctx.arcTo(x,   y+h, x,   y,   rr);
+    ctx.arcTo(x,   y,   x+w, y,   rr);
+    if (fill) ctx.fill();
+  }
+  function drawStar(cx, cy, outerR, innerR, points) {
+    const R = Math.max(2, outerR);
+    const r = Math.max(1, innerR);
+    ctx.beginPath();
+    const step = Math.PI / points;
+    for (let i=0; i<points*2; i++) {
+      const a = -Math.PI/2 + i*step;
+      const d = (i % 2 === 0) ? R : r;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+
+  // player muda de forma a cada nível (com tamanhos mínimos seguros)
+  function drawPlayerShape(level, x, y, size) {
+    const idx = (level - 1) % 6;      // ciclo de 6 formas
+    const s   = Math.max(6, size);    // tamanho mínimo do desenho
+    const r   = Math.max(3, Math.min(10, s / 2.5));
+    const cx  = x + s/2, cy = y + s/2;
+
     ctx.save();
-    ctx.fillStyle=cssVar('--player');
-    switch(idx){
-      case 0: ctx.beginPath(); ctx.arc(cx,cy,s/2-2,0,Math.PI*2); ctx.fill(); break;
-      case 1: ctx.fillRect(x+2,y+2,s-4,s-4); break;
-      case 2: ctx.beginPath(); ctx.moveTo(cx,y); ctx.lineTo(x+s,cy); ctx.lineTo(cx,y+s); ctx.lineTo(x,cy); ctx.fill(); break;
-      case 3: ctx.beginPath(); ctx.moveTo(cx,y); ctx.lineTo(x+s,y+s); ctx.lineTo(x,y+s); ctx.fill(); break;
-      case 4: ctx.beginPath(); for(let i=0;i<10;i++){const a=Math.PI/5*i-Math.PI/2;const r=i%2?s/2-2:s/4;ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}ctx.fill();break;
-      case 5: ctx.beginPath(); for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2;ctx.lineTo(cx+Math.cos(a)*(s/2-2),cy+Math.sin(a)*(s/2-2));}ctx.fill();break;
+    ctx.shadowBlur  = Math.min(s * 0.9, 20);
+    ctx.shadowColor = cssVar('--player');
+    ctx.fillStyle   = cssVar('--player');
+
+    switch (idx) {
+      case 0: // círculo
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(3, (s - 4) / 2), 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 1: // quadrado arredondado
+        roundRect(ctx, x + 2, y + 2, s - 4, s - 4, r, true);
+        break;
+      case 2: // losango
+        ctx.beginPath();
+        ctx.moveTo(cx, y + 2);
+        ctx.lineTo(x + s - 2, cy);
+        ctx.lineTo(cx, y + s - 2);
+        ctx.lineTo(x + 2, cy);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 3: // triângulo
+        ctx.beginPath();
+        ctx.moveTo(cx, y + 2);
+        ctx.lineTo(x + s - 2, y + s - 2);
+        ctx.lineTo(x + 2, y + s - 2);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 4: // estrela
+        drawStar(cx, cy, (s - 4) / 2, (s - 4) / 4, 5);
+        ctx.fill();
+        break;
+      case 5: // hexágono
+        ctx.beginPath();
+        for (let i=0;i<6;i++){
+          const a = -Math.PI/2 + i * Math.PI/3;
+          const px = cx + Math.cos(a) * ((s - 4) / 2);
+          const py = cy + Math.sin(a) * ((s - 4) / 2);
+          if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
     }
     ctx.restore();
   }
 
-  function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle=cssVar('--bg');
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = cssVar('--bg');
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-      ctx.fillStyle=grid[y][x]?cssVar('--wall'):cssVar('--path');
-      ctx.fillRect(x*tile,y*tile,tile,tile);
+    // paredes
+    for (let y=0; y<H; y++) {
+      for (let x=0; x<W; x++) {
+        ctx.fillStyle = grid[y][x] ? cssVar('--wall') : cssVar('--path');
+        ctx.fillRect(x*tile, y*tile, tile, tile);
+      }
     }
 
-    ctx.fillStyle=cssVar('--goal');
-    ctx.fillRect(goal.x*tile+2,goal.y*tile+2,tile-4,tile-4);
+    // objetivo
+    ctx.save();
+    ctx.shadowBlur  = Math.min(tile * 0.8, 14);
+    ctx.shadowColor = cssVar('--goal');
+    ctx.fillStyle   = cssVar('--goal');
+    roundRect(ctx, goal.x * tile + 1, goal.y * tile + 1, tile - 2, tile - 2, Math.min(8, tile/3), true);
+    ctx.restore();
 
-    const px=player.x*tile+2,py=player.y*tile+2;
-    const ps=Math.max(6,Math.min(tile-4,FIXED_PLAYER_PX));
-    drawPlayerShape(currentLevel,px,py,ps);
+    // player (tamanho fixo mas seguro)
+    const px = player.x * tile + 2;
+    const py = player.y * tile + 2;
+    const ps = Math.max(6, Math.min(tile - 4, FIXED_PLAYER_PX));
+    drawPlayerShape(currentLevel, px, py, ps);
   }
 
-  function applyLevel(n){
-    currentLevel=n;
-    levelTag.textContent=`Nível ${n}`;
+  // ---------- JOGO ----------
+  function canMove(nx, ny) {
+    return nx >= 0 && ny >= 0 && nx < W && ny < H && grid[ny][nx] === 0;
+  }
+  function move(dx, dy) {
+    const nx = player.x + dx, ny = player.y + dy;
+    if (!canMove(nx, ny)) return;
+    player.x = nx; player.y = ny;
+    if (nx === goal.x && ny === goal.y) {
+      winTitle.textContent = `🎉 Nível ${currentLevel} concluído!`;
+      winDesc.textContent  = `Excelente! Pronto(a) para o próximo?`;
+      winOverlay.classList.add('show');
+      winOverlay.setAttribute('aria-hidden','false');
+    }
+    draw();
+  }
+
+  function applyLevel(n) {
+    currentLevel = n;
+    levelTag.textContent = `Nível ${n}`;
     setThemeForLevel(n);
-    const cfg=LEVELS[Math.min(n-1,LEVELS.length-1)];
-    W=cfg.cols; H=cfg.rows; holdState.delay=cfg.delay;
-    grid=generateMaze(W,H);
-    player={x:1,y:1}; goal={x:W-2,y:H-2};
+
+    // tamanho do labirinto
+    let dims = dimsForAutoLevel();
+    if (sizeSel.value !== 'AUTO') {
+      const preset = { S:[15,11], M:[27,19], G:[41,31], X:[61,45] }[sizeSel.value];
+      if (preset) dims = { cols: preset[0], rows: preset[1], delay: dims.delay };
+    }
+    W = odd(dims.cols); H = odd(dims.rows);
+    holdState.delay = dims.delay;
+
+    grid = generateMaze(W, H);
+    player = {x:1, y:1};
+    goal   = {x: W-2, y: H-2};
+
+    fitCanvas();
+    winOverlay.classList.remove('show');
+    winOverlay.setAttribute('aria-hidden','true');
+    draw();
+  }
+
+  function newGame()  { applyLevel(currentLevel); }
+  function nextLevel(){ applyLevel(currentLevel + 1); }
+
+  // ---------- CONTROLES ----------
+  function startHold(dir) {
+    if (holdState.running) return;
+    holdState.dir = dir;
+    holdState.running = true;
+    move(dir[0], dir[1]); // passo inicial
+    holdState.intId = setInterval(() => move(dir[0], dir[1]), holdState.delay);
+  }
+  function stopHold() {
+    holdState.running = false;
+    if (holdState.intId) { clearInterval(holdState.intId); holdState.intId = null; }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    const k=e.key.toLowerCase();
+    if (['arrowup','w'].includes(k)) startHold([0,-1]);
+    if (['arrowdown','s'].includes(k)) startHold([0, 1]);
+    if (['arrowleft','a'].includes(k)) startHold([-1,0]);
+    if (['arrowright','d'].includes(k)) startHold([ 1,0]);
+  });
+  window.addEventListener('keyup', stopHold);
+
+  // Toque/mouse
+  let touchId=null, start=null;
+  stage.addEventListener('touchstart', (e)=>{
+    const t = e.changedTouches[0]; touchId=t.identifier; start={x:t.clientX,y:t.clientY};
+  }, {passive:true});
+  stage.addEventListener('touchend', ()=>{
+    touchId=null; start=null; stopHold();
+  });
+  stage.addEventListener('touchmove', (e)=>{
+    if (touchId===null) return;
+    const t=[...e.changedTouches].find(t=>t.identifier===touchId); if(!t||!start) return;
+    const dx=t.clientX-start.x, dy=t.clientY-start.y;
+    if (Math.abs(dx)+Math.abs(dy) < 12) return;
+    const dir = Math.abs(dx) > Math.abs(dy) ? (dx>0?[1,0]:[-1,0]) : (dy>0?[0,1]:[0,-1]);
+    startHold(dir);
+  }, {passive:true});
+
+  newBtn.addEventListener('click', newGame);
+  againBtn.addEventListener('click', newGame);
+  nextBtn.addEventListener('click', nextLevel);
+
+  // Música (opcional)
+  function tryAutoplay(){
+    if(!bgm) return;
+    bgm.volume = parseFloat(vol.value||'0.5');
+    bgm.play().then(()=>{
+      musicToggle.setAttribute('aria-pressed','true');
+      musicToggle.textContent='🎵 Música: Ligada';
+    }).catch(()=>{ /* bloqueado pelo navegador, tudo bem */ });
+  }
+  musicToggle.addEventListener('click', ()=>{
+    if(!bgm) return;
+    if (bgm.paused) { bgm.play(); musicToggle.textContent='🎵 Música: Ligada'; }
+    else { bgm.pause(); musicToggle.textContent='🎵 Música: Desligada'; }
+  });
+  vol.addEventListener('input', ()=>{ if(bgm) bgm.volume=parseFloat(vol.value||'0.5'); });
+
+  // ---------- INICIALIZAÇÃO ----------
+  function resizeAndRedraw(){
     fitCanvas(); draw();
   }
+  setThemeForLevel(currentLevel);
+  applyLevel(currentLevel);
 
-  newBtn.onclick=()=>applyLevel(currentLevel);
-  nextBtn.onclick=()=>applyLevel(currentLevel+1);
-  againBtn.onclick=()=>applyLevel(currentLevel);
+  // tenta tocar após carregar (se bloqueado, primeira interação libera)
+  window.addEventListener('load', () => setTimeout(tryAutoplay, 300));
 
-  window.addEventListener('resize',()=>{fitCanvas();draw();});
-  applyLevel(1);
+  // resize com debounce
+  let resizeTO;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTO);
+    resizeTO = setTimeout(resizeAndRedraw, 120);
+  });
 })();
