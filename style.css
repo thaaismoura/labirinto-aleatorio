@@ -1,9 +1,7 @@
 :root{
-  --bg: #f5f7fb;            /* definido/ajustado tbm pelo JS por nível */
+  --bg: #f5f7fb;            /* ajustado pelo JS por nível */
   --panel: #111827cc;
   --text-on-panel: #e5e7eb;
-  --accent: #22c55e;
-  --accent2: #60a5fa;
 
   /* variam por nível via JS */
   --wall: #1f2937;
@@ -43,9 +41,7 @@ body{
   gap:12px;
 }
 
-.controls{
-  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
-}
+.controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .badge{
   background:#111827; color:#e5e7eb; border:1px solid #374151;
   padding:2px 8px; border-radius:999px; font-size:12px; margin-left:6px;
@@ -61,18 +57,13 @@ body{
 .music-controls{ display:inline-flex; gap:8px; align-items:center; }
 
 /* palco do jogo */
-.stage-wrap{
-  width:100%;
-  display:grid;
-  place-items:center;
-}
+.stage-wrap{ width:100%; display:grid; place-items:center; }
 .canvas-wrap{
   width:min(100%, 1200px);
-  /* altura responsiva: nunca menor que 320px, normalmente 70vh, sem passar de 85vh */
-  height:clamp(320px, 70vh, 85vh);
+  /* altura será controlada em JS p/ evitar bugs de vh no mobile */
+  min-height:320px;
   position:relative;
-  display:grid;
-  place-items:center;
+  display:grid; place-items:center;
   padding:12px;
   border-radius:16px;
   background:
@@ -81,13 +72,12 @@ body{
   box-shadow: 0 8px 30px rgba(0,0,0,.12);
 }
 
-/* canvas sempre cabe na área */
 canvas{
   border-radius:12px;
   box-shadow: 0 0 16px #00000040;
   max-width:100%;
   max-height:100%;
-  image-rendering: pixelated; /* fica nítido ao escalar */
+  image-rendering: pixelated;
 }
 
 /* overlay de vitória */
@@ -104,8 +94,27 @@ canvas{
 }
 .card .row{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
 
-/* inputs */
 select, input[type="range"]{
   background:#0b1226; color:#e5e7eb; border:1px solid #374151;
   padding:6px 10px; border-radius:8px;
+}
+
+/* D-Pad (controles visuais) */
+.dpad{
+  position:absolute; left:12px; bottom:12px;
+  display:none; /* escondido por padrão; aparece no mobile */
+  gap:8px; align-items:center; user-select:none;
+  z-index:5;
+}
+.dpad .key{
+  width:56px; height:56px; font-size:20px; line-height:1;
+  border-radius:12px; border:1px solid #374151;
+  background:#0b1226cc; color:#e5e7eb;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.dpad .mid{ display:flex; gap:8px; }
+
+/* mostrar D-Pad em telas pequenas (mobile) */
+@media (max-width: 820px){
+  .dpad{ display:flex; flex-direction:column; }
 }
