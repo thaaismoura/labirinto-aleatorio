@@ -104,8 +104,9 @@ select:hover { border-color: #4b5563; }
   border-radius: 18px;
   overflow: clip;
   border: 1px solid #1f2937;
-  background: linear-gradient(180deg, #0a0f22 0%, #060912 100%);
-  box-shadow: 0 30px 60px #0000006c inset, 0 10px 40px #00000070;
+  background: linear-gradient(180deg, #1a264d 0%, #0d1327 100%);
+  box-shadow: 0 20px 50px #00000050 inset, 0 8px 30px #00000060;
+
 }
 
 @media (max-width: 900px) {
