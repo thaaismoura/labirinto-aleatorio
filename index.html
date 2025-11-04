@@ -12,55 +12,23 @@
       <h1>🧩 Labirinto Aleatório <span id="levelTag" class="badge">Nível 1</span></h1>
       <div class="controls">
         <label for="sizeSel" class="hint">Tamanho:</label>
-        <select id="sizeSel" aria-label="Tamanho do labirinto">
-          <option value="AUTO" selected>Automático por nível</option>
+        <select id="sizeSel">
+          <option value="AUTO" selected>Automático</option>
           <option value="S">Pequeno</option>
           <option value="M">Médio</option>
           <option value="G">Grande</option>
           <option value="X">Gigante</option>
         </select>
         <button id="newBtn" class="btn">Novo</button>
-        <div class="music-controls">
-          <button id="musicToggle" class="btn" aria-pressed="false">🎵 Música: Desligada</button>
-          <label class="hint" for="vol">Vol.</label>
-          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.5">
-        </div>
       </div>
     </header>
 
     <main class="stage-wrap">
       <div class="canvas-wrap" id="stage">
-        <canvas id="game" width="900" height="600"></canvas>
+        <canvas id="game"></canvas>
 
         <div class="overlay" id="winOverlay" aria-hidden="true">
           <div class="card">
             <h2 id="winTitle">🎉 Você venceu!</h2>
             <p id="winDesc">Nível concluído. Bora subir o desafio?</p>
             <div class="row">
-              <button class="btn" id="againBtn">Repetir nível</button>
-              <button class="btn primary" id="nextBtn">Próximo nível ▶</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- D-Pad: aparece apenas no celular (CSS controla visibilidade) -->
-        <div class="dpad" id="dpad" aria-label="Controles de direção">
-          <button class="key up"    data-dir="0,-1" aria-label="Cima">▲</button>
-          <div class="mid">
-            <button class="key left"  data-dir="-1,0" aria-label="Esquerda">◀</button>
-            <button class="key right" data-dir="1,0"  aria-label="Direita">▶</button>
-          </div>
-          <button class="key down"  data-dir="0,1"  aria-label="Baixo">▼</button>
-        </div>
-      </div>
-    </main>
-
-    <footer class="bar">
-      <small>© 2025 Thaís Moura — Jogo educativo</small>
-    </footer>
-  </div>
-
-  <audio id="bgm" loop src="Lenny Pixels - Funky n Blinky - 8bit.mp3"></audio>
-  <script src="script.js"></script>
-</body>
-</html>
