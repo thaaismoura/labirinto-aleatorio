@@ -17,7 +17,11 @@
   const underControls = document.getElementById('underControls');
   const musicToggle = document.getElementById('musicToggle');
   const vol = document.getElementById('vol');
-  const bgm = document.getElementById('bgm'); // pode não tocar; tratamos
+  const bgm = document.getElementById('bgm');
+
+  // ---------- CONTROLES DE ESCALA ----------
+  const MIN_TILE = 18;            // 👈 célula mínima: evita labirinto “mini”
+  const PLAYER_PX = 18;           // 👈 tamanho fixo do player (bolinha/formas)
 
   // ---------- CONFIG DE NÍVEIS ----------
   const LEVELS = [
@@ -48,15 +52,16 @@
   const odd = n => n % 2 ? n : n-1;
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  // Tema por nível
+  // Tema por nível (AGORA COM FUNDO CLARO dentro do canvas)
   function setThemeForLevel(level){
     const baseHue=(level*47)%360;
     const root=document.documentElement.style;
-    root.setProperty('--wall',  `hsl(${baseHue},22%,18%)`);
-    root.setProperty('--path',  `hsl(${baseHue},30%,8%)`);
-    root.setProperty('--player',`hsl(${(baseHue+40)%360},90%,55%)`);
-    root.setProperty('--goal',  `hsl(${(baseHue+320)%360},80%,55%)`);
-    root.setProperty('--ring',  `hsla(${baseHue},100%,100%,0.07)`);
+    root.setProperty('--bg',    `hsl(${baseHue}, 28%, 94%)`);  // 👈 fundo claro do labirinto
+    root.setProperty('--wall',  `hsl(${baseHue}, 22%, 18%)`);
+    root.setProperty('--path',  `hsl(${baseHue}, 30%, 8%)`);
+    root.setProperty('--player',`hsl(${(baseHue+40)%360}, 90%, 55%)`);
+    root.setProperty('--goal',  `hsl(${(baseHue+320)%360}, 80%, 55%)`);
+    root.setProperty('--ring',  `hsla(${baseHue}, 100%, 100%, 0.07)`);
   }
 
   function dimsForAutoLevel(){
@@ -70,7 +75,6 @@
   }
   function neighborsCarvables(x, y, g) {
     const dirs = [[0,-2],[2,0],[0,2],[-2,0]];
-    // embaralha direções
     for (let i = dirs.length - 1; i > 0; i--) {
       const j = (Math.random()*(i+1))|0; [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
     }
@@ -89,12 +93,11 @@
     g[sy][sx] = 0;
     const stack = [[sx, sy]];
     while (stack.length) {
-      const last = stack[stack.length - 1];   // <- sem .at(-1)
+      const last = stack[stack.length - 1];   // compatível
       const cx = last[0], cy = last[1];
       const ns = neighborsCarvables(cx, cy, g);
-      if (!ns.length) {
-        stack.pop();
-      } else {
+      if (!ns.length) stack.pop();
+      else {
         const [nx, ny, dx, dy] = choice(ns);
         g[cy + dy/2][cx + dx/2] = 0; // abre parede entre as células
         g[ny][nx] = 0;
@@ -104,15 +107,19 @@
     return g;
   }
 
-  // ---------- DESENHO ----------
+  // ---------- DESENHO / ESCALA ----------
   function fitCanvas() {
     const pad = 24;
     const sw = Math.max(0, stage?.clientWidth  || 0);
     const sh = Math.max(0, stage?.clientHeight || 0);
     const availW = Math.max(200, sw - pad * 2);
     const availH = Math.max(200, sh - pad * 2);
-    tile = Math.floor(Math.min(availW / W, availH / H));
-    tile = Math.max(tile, 10);
+
+    // calcula tile que caberia — e depois garante o mínimo
+    let computed = Math.floor(Math.min(availW / W, availH / H));
+    tile = Math.max(MIN_TILE, computed);   // 👈 nunca menor que MIN_TILE
+
+    // mesmo que o canvas fique “maior” em pixels, o CSS escala para caber
     canvas.width = Math.max(100, tile * W);
     canvas.height = Math.max(100, tile * H);
   }
@@ -155,7 +162,7 @@
 
   function drawPlayerShape(level, x, y, size) {
     const idx = (level - 1) % 6;
-    const s   = 15;
+    const s   = PLAYER_PX;             // 👈 tamanho fixo do jogador
     const r   = Math.max(3, Math.min(10, s / 2.5));
     const cx  = x + s/2, cy = y + s/2;
 
@@ -173,17 +180,13 @@
         ctx.lineTo(x + s - 2, cy);
         ctx.lineTo(cx, y + s - 2);
         ctx.lineTo(x + 2, cy);
-        ctx.closePath();
-        ctx.fill();
-        break;
+        ctx.closePath(); ctx.fill(); break;
       case 3:
         ctx.beginPath();
         ctx.moveTo(cx, y + 2);
         ctx.lineTo(x + s - 2, y + s - 2);
         ctx.lineTo(x + 2, y + s - 2);
-        ctx.closePath();
-        ctx.fill();
-        break;
+        ctx.closePath(); ctx.fill(); break;
       case 4: drawStar(cx, cy, (s - 4) / 2, (s - 8) / 4, 5); ctx.fill(); break;
       case 5: drawPolygon(cx, cy, (s - 4) / 2, 6); ctx.fill(); break;
     }
@@ -191,32 +194,23 @@
   }
 
   function draw() {
+    // FUNDO CLARO DO LABIRINTO (canvas)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'black'; // seu tema mantém fundo escuro aqui
+    ctx.fillStyle = cssVar('--bg') || '#f6f8ff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // paredes
     ctx.save();
     ctx.shadowBlur  = Math.max(2, tile * 0.25);
-    ctx.shadowColor = 'rgba(255,255,255,0.06)';
-    for (let y=0; y<H; y++) {
-      for (let x=0; x<W; x++) {
-        if (grid[y][x]) {
-          ctx.fillStyle = cssVar('--wall');
-          ctx.fillRect(x*tile, y*tile, tile, tile);
-        }
-      }
+    ctx.shadowColor = 'rgba(0,0,0,0.07)';
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      if (grid[y][x]) { ctx.fillStyle = cssVar('--wall'); ctx.fillRect(x*tile, y*tile, tile, tile); }
     }
     ctx.restore();
 
     // caminhos
-    for (let y=0; y<H; y++) {
-      for (let x=0; x<W; x++) {
-        if (!grid[y][x]) {
-          ctx.fillStyle = cssVar('--path');
-          ctx.fillRect(x*tile, y*tile, tile, tile);
-        }
-      }
+    for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
+      if (!grid[y][x]) { ctx.fillStyle = cssVar('--path'); ctx.fillRect(x*tile, y*tile, tile, tile); }
     }
 
     // objetivo
@@ -227,11 +221,10 @@
     roundRect(ctx, goal.x * tile + 1, goal.y * tile + 1, tile - 2, tile - 2, Math.min(8, tile / 3), true);
     ctx.restore();
 
-    // player
-    const px = player.x * tile + 2;
-    const py = player.y * tile + 2;
-    const ps = Math.max(6, tile - 4);
-    drawPlayerShape(currentLevel, px, py, ps);
+    // player (centralizado na célula)
+    const px = player.x * tile + Math.max(2, (tile - PLAYER_PX)/2);
+    const py = player.y * tile + Math.max(2, (tile - PLAYER_PX)/2);
+    drawPlayerShape(currentLevel, px, py, PLAYER_PX);
   }
 
   // ---------- LÓGICA DE JOGO ----------
@@ -299,7 +292,6 @@
     if (holdState.intId) { clearInterval(holdState.intId); holdState.intId = null; }
   }
 
-  // Controles visuais (se existirem)
   if (underControls) {
     underControls.addEventListener('pointerdown', (e) => {
       const btn = e.target.closest?.('.uc-btn'); if (!btn) return;
@@ -338,7 +330,7 @@
   function initSfx(){
     if (actx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return; // navegador sem WebAudio
+    if (!AC) return;
     actx = new AC();
     masterGain = actx.createGain();
     masterGain.connect(actx.destination);
@@ -349,7 +341,7 @@
     bgm.volume = (vol && parseFloat(vol.value)) || 0.5;
     const p = bgm.play?.();
     if (p && typeof p.then === 'function') {
-      p.then(refreshMusicBtn).catch(()=>{/* ignorado */});
+      p.then(refreshMusicBtn).catch(()=>{});
     } else {
       refreshMusicBtn();
     }
@@ -400,10 +392,7 @@
   setThemeForLevel(currentLevel);
   applyLevel(currentLevel);
 
-  // autoplay best-effort
   window.addEventListener('load', () => setTimeout(tryAutoplay, 300));
-
-  // resize com debounce
   let resizeTO;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTO);
